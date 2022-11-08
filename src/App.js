@@ -20,9 +20,11 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   UserOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  CodeSandboxOutlined
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
+import TechnologiesAdmin from "./Pages/TechnologiesAdmin";
 
 const { Header, Sider, Content } = Layout;
 
@@ -70,9 +72,17 @@ const AppOutlet = () => {
                   icon: <UserOutlined />,
                   label: 'Dashboard',
                   to: '/admin/dashboard',
+                  onClick: () => navigate('/admin/dashboard')
                 },
                 {
                   key: '2',
+                  icon: <CodeSandboxOutlined />,
+                  label: 'Technologies',
+                  to: '/admin/technologies',
+                  onClick: () => navigate('/admin/technologies')
+                },
+                {
+                  key: '3',
                   icon: <LogoutOutlined />,
                   label: 'Logout',
                   onClick: () => signOut()
@@ -123,6 +133,7 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route element={<AppOutlet />}>
             <Route path="admin/dashboard" element={<AdminDashboard />} />
+            <Route path="admin/technologies" element={<TechnologiesAdmin />} />
           </Route>
           <Route path="*" element={<Login />} />
         </Routes>
