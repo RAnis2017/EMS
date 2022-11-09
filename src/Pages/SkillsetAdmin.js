@@ -9,11 +9,11 @@ import { SearchOutlined } from '@ant-design/icons';
 import Highlighter from 'react-highlight-words';
 import { useMutation, useQuery, useQueryClient } from 'react-query'
 
-import './TechnologiesAdmin.css'
+import './SkillsetAdmin.css'
 
 const { Option } = Select;
 
-function TechnologiesAdmin(props) {
+function SkillsetAdmin(props) {
     const [showAddEditForm, setShowAddEditForm] = useState(false)
     const [form] = Form.useForm();
     const [searchText, setSearchText] = useState('');
@@ -34,8 +34,21 @@ function TechnologiesAdmin(props) {
         )
     )
 
-    const { isLoading: addTechLoading, isSuccess: addTechSuccess, mutate: addTechMutate } = useMutation('add-technology', (data) =>
-        fetch('http://localhost:3001/admin/add-technology', {
+    const { isLoading: skillsLoading, data: skillData } = useQuery('skills', () =>
+        fetch('http://localhost:3001/admin/get-skills', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'x-access-token': localStorage.getItem('token')
+            }
+        }).then(res =>
+            res.json()
+        )
+    )
+
+    const { isLoading: addSkillLoading, isSuccess: addSkillSuccess, mutate: addSkillMutate } = useMutation('add-skills', (data) =>
+        fetch('http://localhost:3001/admin/add-skill', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -49,13 +62,13 @@ function TechnologiesAdmin(props) {
         onSuccess: (data, variables, context) => {
             setShowAddEditForm(false)
             form.resetFields()
-            queryClient.invalidateQueries('technologies')
+            queryClient.invalidateQueries('skills')
         }
     }
     )
 
-    const { isLoading: editTechLoading, isSuccess: editTechSuccess, mutate: editTechMutate } = useMutation('edit-technology', (data) =>
-        fetch('http://localhost:3001/admin/update-technology/'+data.key, {
+    const { isLoading: editSkillLoading, isSuccess: editSkillSuccess, mutate: editSkillMutate } = useMutation('edit-skills', (data) =>
+        fetch('http://localhost:3001/admin/update-skill/'+data.key, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
@@ -69,13 +82,13 @@ function TechnologiesAdmin(props) {
         onSuccess: (data, variables, context) => {
             setShowAddEditForm(false)
             form.resetFields()
-            queryClient.invalidateQueries('technologies')
+            queryClient.invalidateQueries('skills')
         }
     }
     )
 
-    const { isLoading: deleteTechLoading, isSuccess: deleteTechSuccess, mutate: deleteTechMutate } = useMutation('delete-technology', (data) =>
-        fetch('http://localhost:3001/admin/delete-technology/'+data.key, {
+    const { isLoading: deleteSkillLoading, isSuccess: deleteSkillSuccess, mutate: deleteSkillMutate } = useMutation('delete-skill', (data) =>
+        fetch('http://localhost:3001/admin/delete-skill/'+data.key, {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',
@@ -89,7 +102,7 @@ function TechnologiesAdmin(props) {
         onSuccess: (data, variables, context) => {
             setShowAddEditForm(false)
             form.resetFields()
-            queryClient.invalidateQueries('technologies')
+            queryClient.invalidateQueries('skills')
         }
     }
     )
@@ -192,20 +205,22 @@ function TechnologiesAdmin(props) {
         }else{
             record.status = 'Active'
         }
-        editTechMutate(record)
+        editSkillMutate(record)
     }
 
     const editRecord = (record) => {
         form.setFieldsValue({
             key: record.key,
             name: record.name,
+            technology: record.technology,
+            technologyId: record.technologyId,
             status: record.status
         })
         setShowAddEditForm(true)
     }
 
     const deleteRecord = (record) => {
-        deleteTechMutate(record)
+        deleteSkillMutate(record)
     }
 
     const items = (record) => {
@@ -246,9 +261,18 @@ function TechnologiesAdmin(props) {
             title: 'Name',
             dataIndex: 'name',
             key: 'name',
-            width: '30%',
+            width: '20%',
             ...getColumnSearchProps('name'),
             sorter: (a, b) => a.name.length - b.name.length,
+            sortDirections: ['descend', 'ascend'],
+        },
+        {
+            title: 'Technology',
+            dataIndex: 'technology',
+            key: 'technology',
+            width: '20%',
+            ...getColumnSearchProps('technology'),
+            sorter: (a, b) => a.technology.length - b.technology.length,
             sortDirections: ['descend', 'ascend'],
         },
         {
@@ -293,12 +317,12 @@ function TechnologiesAdmin(props) {
     ];
 
 
-    const submitTechnologies = (values) => {
+    const submitSkills = (values) => {
         console.log(values)
         if(values.key) {
-            editTechMutate(values)
+            editSkillMutate(values)
         } else {
-            addTechMutate(values)
+            addSkillMutate(values)
         }
     };
 
@@ -319,21 +343,36 @@ function TechnologiesAdmin(props) {
     return (
         <div>
             <div className="flex justify-between">
-                <h1>Technologies</h1>
+                <h1>Skill Sets</h1>
                 <Button type="primary" onClick={() => setShowAddEditForm((prev) => !prev)}>
-                    {`${showAddEditForm ? 'Close' : 'Add Technology'}`}
+                    {`${showAddEditForm ? 'Close' : 'Add Skillset'}`}
                 </Button>
             </div>
 
             {
                 showAddEditForm && (
                     <div className="flex justify-center">
-                        <Form form={form} name="control-hooks" className="w-1/2" onFinish={submitTechnologies}>
+                        <Form form={form} name="control-hooks" className="w-1/2" onFinish={submitSkills}>
                             <Form.Item name="key" label="Key" hidden>
+                                <Input />
+                            </Form.Item>
+                            <Form.Item name="technologyId" label="technologyId" hidden>
                                 <Input />
                             </Form.Item>
                             <Form.Item name="name" label="Name" rules={[{ required: true }]}>
                                 <Input />
+                            </Form.Item>
+                            <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
+                                <Select
+                                    placeholder="Set Status"
+                                    allowClear
+                                >
+                                    {
+                                        techData.data.map((tech) => (
+                                            <Option key={tech.key} value={tech.key}>{tech.name}</Option>
+                                        ))    
+                                    }
+                                </Select>
                             </Form.Item>
                             <Form.Item name="status" label="Status" rules={[{ required: true }]}>
                                 <Select
@@ -362,7 +401,7 @@ function TechnologiesAdmin(props) {
 
             {
                 !showAddEditForm && (
-                    <Table columns={columns} dataSource={techData?.data} className="mt-5" />
+                    <Table columns={columns} dataSource={skillData?.data} className="mt-5" />
                 )
             }
         </div>
@@ -381,4 +420,4 @@ const mapDispatchToProps = dispatch => {
     }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(TechnologiesAdmin)
+export default connect(mapStateToProps, mapDispatchToProps)(SkillsetAdmin)

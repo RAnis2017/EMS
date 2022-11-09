@@ -1,7 +1,7 @@
 require('dotenv').config()
 var express = require('express');
 var router = express.Router();
-const mongoose = require("mongoose");
+const adminRoutes = require('./admin');
 const bcrypt = require('bcrypt');
 const auth = require("../middleware/auth");
 const jwt = require("jsonwebtoken");
@@ -256,5 +256,7 @@ router.post('/forgot-password', function (req, res) {
 });
 
 router.use(auth);
+
+router.use('/admin', adminRoutes);
 
 module.exports = router;
