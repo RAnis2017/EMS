@@ -4,25 +4,26 @@ import { useNavigate } from "react-router-dom"
 import {
     DownOutlined
 } from '@ant-design/icons';
-import { Space, Table, Dropdown, Button, Form, Input, Select, Menu, Row, Col } from 'antd';
+import { Space, Table, Dropdown, Button, Form, Input, Select, Menu, Tag, Row, Col } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import Highlighter from 'react-highlight-words';
 import { useMutation, useQuery, useQueryClient } from 'react-query'
 
-import './SkillsetAdmin.css'
+import './EmployeesAdmin.css'
 
 const { Option } = Select;
 
-function SkillsetAdmin(props) {
+function EmployeesAdmin(props) {
     const [showAddEditForm, setShowAddEditForm] = useState(false)
     const [form] = Form.useForm();
     const [searchText, setSearchText] = useState('');
     const [searchedColumn, setSearchedColumn] = useState('');
     const searchInput = useRef(null);
     const queryClient = useQueryClient()
+    const [skills, setSkills] = useState([])
 
-    const { isLoading: techsLoading, data: techData } = useQuery('technologies', () =>
-        fetch('http://localhost:3001/admin/get-technologies', {
+    const { isLoading: techsLoading, data: techData } = useQuery('technologies-skills', () =>
+        fetch('http://localhost:3001/admin/get-technologies-skills', {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -47,8 +48,21 @@ function SkillsetAdmin(props) {
         )
     )
 
-    const { isLoading: addSkillLoading, isSuccess: addSkillSuccess, mutate: addSkillMutate } = useMutation('add-skills', (data) =>
-        fetch('http://localhost:3001/admin/add-skill', {
+    const { isLoading: employeesLoading, data: employeesData } = useQuery('employees', () =>
+        fetch('http://localhost:3001/admin/get-employees', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'x-access-token': localStorage.getItem('token')
+            }
+        }).then(res =>
+            res.json()
+        )
+    )
+
+    const { isLoading: addEmployeeLoading, isSuccess: addEmployeeSuccess, mutate: addEmployeeMutate } = useMutation('add-employees', (data) =>
+        fetch('http://localhost:3001/admin/add-employee', {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -62,13 +76,13 @@ function SkillsetAdmin(props) {
         onSuccess: (data, variables, context) => {
             setShowAddEditForm(false)
             form.resetFields()
-            queryClient.invalidateQueries('skills')
+            queryClient.invalidateQueries('employees')
         }
     }
     )
 
-    const { isLoading: editSkillLoading, isSuccess: editSkillSuccess, mutate: editSkillMutate } = useMutation('edit-skills', (data) =>
-        fetch('http://localhost:3001/admin/update-skill/' + data.key, {
+    const { isLoading: editEmployeeLoading, isSuccess: editEmployeeSuccess, mutate: editEmployeeMutate } = useMutation('edit-employees', (data) =>
+        fetch('http://localhost:3001/admin/update-employee/' + data.key, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
@@ -82,13 +96,13 @@ function SkillsetAdmin(props) {
         onSuccess: (data, variables, context) => {
             setShowAddEditForm(false)
             form.resetFields()
-            queryClient.invalidateQueries('skills')
+            queryClient.invalidateQueries('employees')
         }
     }
     )
 
-    const { isLoading: deleteSkillLoading, isSuccess: deleteSkillSuccess, mutate: deleteSkillMutate } = useMutation('delete-skill', (data) =>
-        fetch('http://localhost:3001/admin/delete-skill/' + data.key, {
+    const { isLoading: deleteEmployeeLoading, isSuccess: deleteEmployeeSuccess, mutate: deleteEmployeeMutate } = useMutation('delete-employee', (data) =>
+        fetch('http://localhost:3001/admin/delete-employee/' + data.key, {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',
@@ -102,7 +116,7 @@ function SkillsetAdmin(props) {
         onSuccess: (data, variables, context) => {
             setShowAddEditForm(false)
             form.resetFields()
-            queryClient.invalidateQueries('skills')
+            queryClient.invalidateQueries('employees')
         }
     }
     )
@@ -205,22 +219,45 @@ function SkillsetAdmin(props) {
         } else {
             record.status = 'Active'
         }
-        editSkillMutate(record)
+        editEmployeeMutate(record)
     }
 
     const editRecord = (record) => {
+
+        let skills = []
+        if (record.skills) {
+            skills = record.skills?.length && record.skills.indexOf(',') > -1 ? record.skills.split(',') : [`${record.skills}`]
+            skills = skillData.data.filter((skill) => {
+                console.log(skills)
+                if (skills.indexOf(`${skill.key}`) > -1) {
+                    return true
+                }
+                return false
+            })
+        }
+
+        techData.data.find((item) => {
+            if (parseInt(item.key) === parseInt(record.technologyId)) {
+                setSkills(item.skills)
+            }
+        }
+        )
+
         form.setFieldsValue({
             key: record.key,
-            name: record.name,
-            technology: record.technology,
-            technologyId: record.technologyId,
-            status: record.status
+            alias: record.alias,
+            email: record.email,
+            technology: record.technologyId,
+            skills: skills,
+            status: record.status,
+            manager: record.manager,
+            sporting_manager: record.sporting_manager
         })
         setShowAddEditForm(true)
     }
 
     const deleteRecord = (record) => {
-        deleteSkillMutate(record)
+        deleteEmployeeMutate(record)
     }
 
     const items = (record) => {
@@ -258,12 +295,79 @@ function SkillsetAdmin(props) {
 
     const columns = [
         {
-            title: 'Name',
-            dataIndex: 'name',
-            key: 'name',
+            title: 'Alias',
+            dataIndex: 'alias',
+            key: 'alias',
             width: '20%',
-            ...getColumnSearchProps('name'),
-            sorter: (a, b) => a.name.length - b.name.length,
+            ...getColumnSearchProps('alias'),
+            sorter: (a, b) => a.alias.length - b.alias.length,
+            sortDirections: ['descend', 'ascend'],
+        },
+        {
+            title: 'Email',
+            dataIndex: 'email',
+            key: 'email',
+            width: '20%',
+            ...getColumnSearchProps('email'),
+            sorter: (a, b) => a.email.length - b.email.length,
+            sortDirections: ['descend', 'ascend'],
+        },
+        {
+            title: 'Technology',
+            dataIndex: 'technology',
+            key: 'technology',
+            width: '20%',
+            ...getColumnSearchProps('technology'),
+            sorter: (a, b) => a.technology.length - b.technology.length,
+            sortDirections: ['descend', 'ascend'],
+        },
+        {
+            title: 'Skillsets',
+            dataIndex: 'skills',
+            key: 'skills',
+            width: '20%',
+            ...getColumnSearchProps('skills'),
+            sorter: (a, b) => a.skills.length - b.skills.length,
+            sortDirections: ['descend', 'ascend'],
+            render: (_, { skills }) => {
+                let tags = []
+                tags = skills?.length && skills.indexOf(',') > -1 ? skills.split(',') : [`${skills}`]
+                tags = skillData.data.filter((skill) => {
+                    if (tags.includes(`${skill.key}`)) {
+                        return true
+                    }
+                    return false
+                })
+                return (
+                    <>
+                        {tags.map(skill => {
+                            let color = 'geekblue';
+                            return (
+                                <Tag color={color} key={skill.key}>
+                                    {skill.name.toUpperCase()}
+                                </Tag>
+                            );
+                        })}
+                    </>
+                )
+            },
+        },
+        {
+            title: 'Manager',
+            dataIndex: 'manager',
+            key: 'manager',
+            width: '20%',
+            ...getColumnSearchProps('manager'),
+            sorter: (a, b) => a.manager.length - b.manager.length,
+            sortDirections: ['descend', 'ascend'],
+        },
+        {
+            title: 'Sporting Manager',
+            dataIndex: 'sporting_manager',
+            key: 'sporting_manager',
+            width: '20%',
+            ...getColumnSearchProps('sporting_manager'),
+            sorter: (a, b) => a.sporting_manager.length - b.sporting_manager.length,
             sortDirections: ['descend', 'ascend'],
         },
         {
@@ -276,24 +380,9 @@ function SkillsetAdmin(props) {
             sortDirections: ['descend', 'ascend'],
         },
         {
-            title: 'Created By',
-            dataIndex: 'createdBy',
-            key: 'createdBy',
-            ...getColumnSearchProps('createdBy'),
-            sorter: (a, b) => a.createdBy.length - b.createdBy.length,
-            sortDirections: ['descend', 'ascend'],
-        },
-        {
-            title: 'Created Date',
-            dataIndex: 'createdDate',
-            key: 'createdDate',
-            ...getColumnSearchProps('createdDate'),
-            sorter: (a, b) => a.createdDate - b.createdDate,
-            sortDirections: ['descend', 'ascend'],
-        },
-        {
             title: 'Action',
             key: 'action',
+            width: '20%',
             render: (_, record) => (
                 <Dropdown overlay={menu(items(record))}>
                     <a onClick={e => e.preventDefault()}>
@@ -308,12 +397,12 @@ function SkillsetAdmin(props) {
     ];
 
 
-    const submitSkills = (values) => {
+    const submitEmployees = (values) => {
         console.log(values)
         if (values.key) {
-            editSkillMutate(values)
+            editEmployeeMutate(values)
         } else {
-            addSkillMutate(values)
+            addEmployeeMutate(values)
         }
     };
 
@@ -331,46 +420,108 @@ function SkillsetAdmin(props) {
         }
     }, [])
 
+    const handleTechnologyChange = (value) => {
+        techData.data.find((item) => {
+            if (parseInt(item.key) === parseInt(value)) {
+                setSkills(item.skills)
+            }
+        }
+        )
+    }
+
+    const layout = {
+        labelCol: { span: 6 },
+        wrapperCol: { span: 18 },
+    };
+
+    const tailLayout = {
+        wrapperCol: { offset: 6, span: 16 },
+    };
+
     return (
         <div>
             <div className="flex justify-between">
-                <h1>Skill Sets</h1>
+                <h1>Employees</h1>
                 <Button type="primary" onClick={() => setShowAddEditForm((prev) => !prev)}>
-                    {`${showAddEditForm ? 'Close' : 'Add Skillset'}`}
+                    {`${showAddEditForm ? 'Close' : 'Add Employee'}`}
                 </Button>
             </div>
 
             {
                 showAddEditForm && (
-                    <div className="flex justify-center">
-                        <Form form={form} name="control-hooks" className="w-1/2" onFinish={submitSkills}>
+                    <div className="flex justify-center flex-col mt-5 mr-5">
+                        <Form form={form} {...layout} name="control-hooks" className="w-full" onFinish={submitEmployees}>
                             <Form.Item name="key" label="Key" hidden>
                                 <Input />
                             </Form.Item>
                             <Form.Item name="technologyId" label="technologyId" hidden>
                                 <Input />
                             </Form.Item>
-                            <Row gutter={5}>
+                            
+                            <Row>
                                 <Col span={12}>
-                                    <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-                                        <Input />
-                                    </Form.Item>
-                                </Col>
-                                <Col span={12}>
-                                    <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
-                                        <Select
-                                            placeholder="Set Technology"
-                                            allowClear
-                                        >
-                                            {
-                                                techData.data.map((tech) => (
-                                                    <Option key={tech.key} value={tech.key}>{tech.name}</Option>
-                                                ))
-                                            }
-                                        </Select>
-                                    </Form.Item>
-                                </Col>
+                            <Form.Item name="alias" label="Alias" rules={[{ required: true }]}>
+                                <Input />
+                            </Form.Item>
+                            </Col>
+
+                            <Col span={12}>
+                            <Form.Item name="email" label="Email">
+                                <Input />
+                            </Form.Item>
+                            </Col>
                             </Row>
+                          
+                            <Row>
+                                <Col span={12}>
+                            <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
+                                <Select
+                                    placeholder="Set Technology"
+                                    allowClear
+                                    onChange={(e) => handleTechnologyChange(e)}
+                                >
+                                    {
+                                        techData.data.map((tech) => (
+                                            <Option key={tech.key} value={tech.key}>{tech.name}</Option>
+                                        ))
+                                    }
+                                </Select>
+                            </Form.Item>
+                            </Col>
+
+                            <Col span={12}>
+                                
+                            <Form.Item name="skills" label="Skillsets">
+                                <Select
+                                    mode="multiple"
+                                    placeholder="Set Skillsets"
+                                    allowClear
+                                >
+                                    {
+                                        skills.map((skill) => (
+                                            <Option key={skill.id} value={skill.id}>{skill.name}</Option>
+                                        ))
+                                    }
+                                </Select>
+                            </Form.Item>
+                            </Col>
+                            </Row>
+                            <Row>
+                                <Col span={12}>
+                            <Form.Item name="manager" label="Manager" rules={[{ required: true }]}>
+                                <Input />
+                            </Form.Item>
+                            </Col>
+
+                            <Col span={12}>
+                            <Form.Item name="sporting_manager" label="Sporting Manager" rules={[{ required: true }]}>
+                                <Input />
+                            </Form.Item>
+                            </Col>
+                            </Row>
+                         
+                            <Row>
+                                <Col span={12}>
                             <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="active">
                                 <Select
                                     placeholder="Set Status"
@@ -380,29 +531,25 @@ function SkillsetAdmin(props) {
                                     <Option value="inactive">Inactive</Option>
                                 </Select>
                             </Form.Item>
-
-                            <div className="flex justify-end">
-                                <Form.Item>
-                                    <Button type="primary" htmlType="submit" className="mr-2">
-                                        Submit
-                                    </Button>
-                                    {
-                                        !form.getFieldValue('key') && (
-                                            <Button htmlType="button" onClick={onReset}>
-                                                Reset
-                                            </Button>
-                                        )
-                                    }
-                                </Form.Item>
-                            </div>
+                            </Col>
+                            </Row>
                         </Form>
+
+                        <div className="flex justify-end">
+                                <Button type="primary" htmlType="submit" className="mr-2">
+                                    Submit
+                                </Button>
+                                <Button htmlType="button" onClick={onReset}>
+                                    Reset
+                                </Button>
+                        </div>
                     </div>
                 )
             }
 
             {
                 !showAddEditForm && (
-                    <Table columns={columns} dataSource={skillData?.data} className="mt-5" />
+                    <Table columns={columns} dataSource={employeesData?.data} scroll={{ y: 600, x: '100vw' }} className="mt-5" />
                 )
             }
         </div>
@@ -421,4 +568,4 @@ const mapDispatchToProps = dispatch => {
     }
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(SkillsetAdmin)
+export default connect(mapStateToProps, mapDispatchToProps)(EmployeesAdmin)

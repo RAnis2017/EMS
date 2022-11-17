@@ -14,4 +14,20 @@
         <p>Regards,</p>
         <p>Admin</p>
     </body>
+</html><html>
+    <head>
+        <style>
+        </style>
+    </head>
+    <body>
+        <p>Hi John Doe,</p>
+        <p>You requested to reset your password.</p>
+        <p>Please, click the link below to reset your password</p>
+        <p>Temporary access password is: UOK3UCgm</p>
+
+        <p><i>Please login and change your password at your earliest!</i></p>
+
+        <p>Regards,</p>
+        <p>Admin</p>
+    </body>
 </html>

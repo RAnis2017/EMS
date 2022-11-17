@@ -45,13 +45,16 @@ router.get('/', function (req, res) {
   res.status(200).json({ 'message': 'hello' });
 });
 
-function createUser(Users, email, name, password, isAdmin = false) {
+function createUser(Users, email, name, password, isAdmin = false, alias, username, status) {
   return new Promise((resolve, reject) => {
     let hash = bcrypt.hashSync(password, 12);
     Users.create({
       email: email,
       password: hash,
       name: name,
+      alias: alias,
+      username: username,
+      status: status,
       isAdmin
     }).then((user) => {
       if (!user) {
@@ -79,6 +82,9 @@ function makePass(length) {
 router.post('/register', async function (req, res) {
   let email = req.body.email;
   let name = req.body.name;
+  let username = req.body.username;
+  let status = req.body.status;
+  let alias = req.body.alias;
   let password = req.body.password;
   let password2 = req.body.password2;
 
@@ -95,7 +101,7 @@ router.post('/register', async function (req, res) {
       if (user) {
         res.status(400).json({ 'message': 'Email already exists' });
       } else {
-        createUser(Users, email, name, password, true).then((user) => {
+        createUser(Users, email, name, password, true, alias, username, status).then((user) => {
           res.status(200).json({ 'message': 'User created', 'user': user });
         }).catch((err) => {
           res.status(500).json({ 'message': 'Server error', err });
@@ -114,7 +120,8 @@ router.post('/login-google', function (req, res) {
 
   Users.findOne({
     where: {
-      email: email
+      email: email,
+      status  : 'Active'
     }
   }).then(async (user) => {
     if (!user) {
@@ -122,7 +129,7 @@ router.post('/login-google', function (req, res) {
       let user = await createUser(Users, email, name, password)
 
       const token = jwt.sign(
-        { user_id: user._id, email, isAdmin: user.isAdmin },
+        { user_id: user._id, alias: user.alias, email, isAdmin: user.isAdmin },
         config.TOKEN_KEY,
         {
           expiresIn: "2h",
@@ -130,6 +137,8 @@ router.post('/login-google', function (req, res) {
       );
       let loggedInUser = {
         name: user.name,
+        alias: user.alias,
+        username: user.username,
         token,
         isAdmin: user.isAdmin,
         email
@@ -141,7 +150,7 @@ router.post('/login-google', function (req, res) {
         res.status(401).json({ 'message': 'Password incorrect' });
       } else {
         const token = jwt.sign(
-          { user_id: user._id, email },
+          { user_id: user._id, alias: user.alias, email },
           config.TOKEN_KEY,
           {
             expiresIn: "24h",
@@ -150,6 +159,8 @@ router.post('/login-google', function (req, res) {
 
         let loggedInUser = {
           name: user.name,
+          alias: user.alias,
+          username: user.username,
           token,
           email,
           isAdmin: user.isAdmin,
@@ -170,7 +181,8 @@ router.post('/login', function (req, res) {
   let password = req.body.password;
   Users.findOne({
     where: {
-      email: email
+      email: email,
+      status: 'Active'
     }
   }).then(async (user) => {
     if (!user) {
@@ -184,7 +196,7 @@ router.post('/login', function (req, res) {
           res.status(401).json({ 'message': 'Password incorrect' });
         } else {
           const token = jwt.sign(
-            { user_id: user._id, email, isAdmin: user.isAdmin },
+            { user_id: user._id, alias: user.alias, email, isAdmin: user.isAdmin },
             config.TOKEN_KEY,
             {
               expiresIn: "24h",
@@ -193,6 +205,8 @@ router.post('/login', function (req, res) {
 
           let loggedInUser = {
             name: user.name,
+            alias: user.alias,
+            username: user.username,
             token,
             email,
             isAdmin: user.isAdmin,

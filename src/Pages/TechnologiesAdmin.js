@@ -335,7 +335,7 @@ function TechnologiesAdmin(props) {
                             <Form.Item name="name" label="Name" rules={[{ required: true }]}>
                                 <Input />
                             </Form.Item>
-                            <Form.Item name="status" label="Status" rules={[{ required: true }]}>
+                            <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="active">
                                 <Select
                                     placeholder="Set Status"
                                     allowClear
@@ -350,9 +350,13 @@ function TechnologiesAdmin(props) {
                                     <Button type="primary" htmlType="submit" className="mr-2">
                                         Submit
                                     </Button>
-                                    <Button htmlType="button" onClick={onReset}>
-                                        Reset
-                                    </Button>
+                                    {
+                                        !form.getFieldValue('key') && (
+                                        <Button htmlType="button" onClick={onReset}>
+                                            Reset
+                                        </Button>
+                                        )
+                                     }
                                 </Form.Item>
                             </div>
                         </Form>

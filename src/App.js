@@ -22,11 +22,13 @@ import {
   UserOutlined,
   LogoutOutlined,
   CodeSandboxOutlined,
-  SketchOutlined
+  SketchOutlined,
+  UsergroupAddOutlined
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import TechnologiesAdmin from "./Pages/TechnologiesAdmin";
 import SkillsetAdmin from "./Pages/SkillsetAdmin";
+import EmployeesAdmin from "./Pages/EmployeesAdmin";
 
 const { Header, Sider, Content } = Layout;
 
@@ -92,6 +94,13 @@ const AppOutlet = () => {
                 },
                 {
                   key: '4',
+                  icon: <UsergroupAddOutlined />,
+                  label: 'Developers',
+                  to: '/admin/developers',
+                  onClick: () => navigate('/admin/developers')
+                },
+                {
+                  key: '5',
                   icon: <LogoutOutlined />,
                   label: 'Logout',
                   onClick: () => signOut()
@@ -107,11 +116,11 @@ const AppOutlet = () => {
               })}
 
               {/* User avatar and name */}
-              <span className="float-right">
+              <span className="float-right mr-10">
                 <img src="https://via.placeholder.com/400x400"
                   alt="alt placeholder" className="w-10 h-10 mb-2 rounded-full inline-block" />
                 {/* <span className="mr-5">{localStorage.getItem('username')}</span> */}
-                <span className="ml-1">{localStorage.getItem('email')}</span>
+                <span className="ml-2">{localStorage.getItem('email')}</span>
               </span>
             </Header>
             <Content
@@ -144,6 +153,7 @@ function App() {
             <Route path="admin/dashboard" element={<AdminDashboard />} />
             <Route path="admin/technologies" element={<TechnologiesAdmin />} />
             <Route path="admin/skillsets" element={<SkillsetAdmin />} />
+            <Route path="admin/developers" element={<EmployeesAdmin />} />
           </Route>
           <Route path="*" element={<Login />} />
         </Routes>

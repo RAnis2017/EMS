@@ -3,6 +3,7 @@ var express = require('express');
 var router = express.Router();
 const Technologies = require('../models/Technologies').Technologies;
 const Skills = require('../models/Skills').Skills;
+const Employees = require('../models/Employees').Employees;
 const multer = require('multer');
 const storage = multer.diskStorage({
     destination: (req, file, callBack) => {
@@ -65,7 +66,7 @@ const single_upload = multer({
 }).single('image')
 
 router.get('/get-technologies', async (req, res, next) => {
-    
+
     await Technologies.sync();
 
     Technologies.findAll({}).then((technologies) => {
@@ -97,7 +98,7 @@ router.post('/add-technology', async (req, res, next) => {
     Technologies.create({
         name: req.body.name,
         status: req.body.status,
-        createdBy: req.user.email
+        createdBy: req.user.alias
     }).then((technology) => {
         if (!technology) {
             res.status(400).json({ error: 'Technology not created' });
@@ -116,7 +117,7 @@ router.put('/update-technology/:id', async (req, res, next) => {
     Technologies.update({
         name: req.body.name,
         status: req.body.status,
-        updatedBy: req.user.email
+        updatedBy: req.user.alias
     }, {
         where: {
             id: req.params.id
@@ -133,7 +134,7 @@ router.put('/update-technology/:id', async (req, res, next) => {
 })
 
 router.delete('/delete-technology/:id', async (req, res, next) => {
-    
+
     await Technologies.sync();
 
     Technologies.destroy({
@@ -152,7 +153,7 @@ router.delete('/delete-technology/:id', async (req, res, next) => {
 })
 
 router.get('/get-skills', async (req, res, next) => {
-    
+
     await Skills.sync();
     await Technologies.sync();
 
@@ -173,6 +174,7 @@ router.get('/get-skills', async (req, res, next) => {
                     key: skill.id,
                     name: skill.name,
                     technology: skill.Technology ? skill.Technology.name : skill.technology,
+                    technologyId: skill.technology,
                     status: skill.status[0].toUpperCase() + skill.status.slice(1),
                     createdBy: skill.createdBy,
                     createdDate: new Date(skill.createdAt).toLocaleDateString(),
@@ -194,7 +196,7 @@ router.post('/add-skill', async (req, res, next) => {
         name: req.body.name,
         technology: req.body.technology,
         status: req.body.status,
-        createdBy: req.user.email
+        createdBy: req.user.alias
     }).then((skill) => {
         if (!skill) {
             res.status(400).json({ error: 'Skill not created' });
@@ -210,11 +212,13 @@ router.put('/update-skill/:id', async (req, res, next) => {
 
     await Skills.sync();
 
+    let technologyId = !isNaN(req.body.technology) ? req.body.technology : parseInt(req.body.technologyId);
+
     Skills.update({
         name: req.body.name,
-        technology: req.body.technology,
+        technology: technologyId,
         status: req.body.status,
-        updatedBy: req.user.email
+        updatedBy: req.user.alias
     }, {
         where: {
             id: req.params.id
@@ -231,7 +235,7 @@ router.put('/update-skill/:id', async (req, res, next) => {
 })
 
 router.delete('/delete-skill/:id', async (req, res, next) => {
-    
+
     await Skills.sync();
 
     Skills.destroy({
@@ -243,6 +247,152 @@ router.delete('/delete-skill/:id', async (req, res, next) => {
             res.status(400).json({ error: 'Skill not deleted' });
         } else {
             res.status(200).json({ message: 'Skill deleted successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.get('/get-technologies-skills', async (req, res, next) => {
+    await Technologies.sync();
+    await Skills.sync();
+
+    Technologies.hasMany(Skills, { foreignKey: 'technology', sourceKey: 'id' });
+    Skills.belongsTo(Technologies, { foreignKey: 'technology', targetKey: 'id' });
+
+    Technologies.findAll({
+        include: [{
+            model: Skills
+        }]
+    }).then((technologies) => {
+
+        if (!technologies) {
+            res.status(400).json({ error: 'Technologies not found' });
+        } else {
+            let data = [];
+            technologies.forEach((technology) => {
+                data.push({
+                    key: technology.id,
+                    name: technology.name,
+                    skills: technology.Skills,
+                    status: technology.status[0].toUpperCase() + technology.status.slice(1),
+                    createdBy: technology.createdBy,
+                    createdDate: new Date(technology.createdAt).toLocaleDateString(),
+                })
+            })
+
+            res.status(200).json({ data });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.get('/get-employees', async (req, res, next) => {
+
+    await Employees.sync();
+    await Technologies.sync();
+
+    Employees.belongsTo(Technologies, { foreignKey: 'technology', targetKey: 'id' });
+    Technologies.hasMany(Employees, { foreignKey: 'technology', sourceKey: 'id' });
+
+    Employees.findAll({
+        include: [{
+            model: Technologies
+        }]
+    }).then((employees) => {
+        if (!employees) {
+            res.status(400).json({ error: 'Employees not found' });
+        } else {
+            let data = [];
+            employees.forEach((employee) => {
+                data.push({
+                    key: employee.id,
+                    alias: employee.emp_alias,
+                    email: employee.email,
+                    skills: employee.skills,
+                    technology: employee.Technology.name,
+                    technologyId: employee.technology,
+                    manager: employee.manager,
+                    sporting_manager: employee.sporting_manager,
+                    status: employee.status[0].toUpperCase() + employee.status.slice(1),
+                    createdBy: employee.createdBy,
+                    createdDate: new Date(employee.createdAt).toLocaleDateString(),
+                })
+            })
+
+            res.status(200).json({ data });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.post('/add-employee', async (req, res, next) => {
+
+    await Employees.sync();
+
+    Employees.create({
+        emp_alias: req.body.alias,
+        email: req.body.email,
+        skills: req.body.skills,
+        technology: req.body.technology,
+        manager: req.body.manager,
+        sporting_manager: req.body.sporting_manager,
+        status: req.body.status,
+        createdBy: req.user.alias
+    }).then((employee) => {
+        if (!employee) {
+            res.status(400).json({ error: 'Employee not created' });
+        } else {
+            res.status(200).json({ message: 'Employee created successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.put('/update-employee/:id', async (req, res, next) => {
+    
+    await Employees.sync();
+
+    Employees.update({
+        emp_alias: req.body.alias,
+        email: req.body.email,
+        skills: req.body.skills?.length && req.body.skills.indexOf(',') > -1 ? req.body.skills.split(',') : [`${req.body.skills}`],
+        technology: req.body.technologyId,
+        manager: req.body.manager,
+        sporting_manager: req.body.sporting_manager,
+        status: req.body.status,
+        updatedBy: req.user.alias
+    }, {
+        where: {
+            id: req.params.id
+        }
+    }).then((employee) => {
+        if (!employee) {
+            res.status(400).json({ error: 'Employee not updated' });
+        } else {
+            res.status(200).json({ message: 'Employee updated successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.delete('/delete-employee/:id', async (req, res, next) => {
+    
+    await Employees.sync();
+
+    Employees.destroy({
+        where: {
+            id: req.params.id
+        }
+    }).then((employee) => {
+        if (!employee) {
+            res.status(400).json({ error: 'Employee not deleted' });
+        } else {
+            res.status(200).json({ message: 'Employee deleted successfully' });
         }
     }).catch((err) => {
         res.status(400).json({ error: err });

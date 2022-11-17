@@ -150,7 +150,7 @@ function Login(props) {
                 <label className="label">
                   <span className="label-text text-white font-bold">Email</span>
                 </label>
-                <Input size="large" placeholder="Type here" value={emailField} onChange={(e) => setEmailField((prev) => e.target.value)}  prefix={<FontAwesomeIcon icon={faUser} />} />
+                <Input size="large" placeholder="Enter valid email" value={emailField} onChange={(e) => setEmailField((prev) => e.target.value)}  prefix={<FontAwesomeIcon icon={faUser} />} />
               </div>
               <div className="form-control w-full max-w-md">
                 <label className="label">
@@ -164,7 +164,7 @@ function Login(props) {
                   <label className="label">
                     <span className="label-text text-white font-bold">Email</span>
                   </label>
-                  <Input size="large" placeholder="Type here" value={forgotPasswordEmail} onChange={(e) => setForgotPasswordEmail((prev) => e.target.value)}  prefix={<FontAwesomeIcon icon={faUser} />} />
+                  <Input size="large" placeholder="Enter valid email" value={forgotPasswordEmail} onChange={(e) => setForgotPasswordEmail((prev) => e.target.value)}  prefix={<FontAwesomeIcon icon={faUser} />} />
                 </div>
               </>
           }

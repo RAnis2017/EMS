@@ -3,24 +3,28 @@ const { sequelize } = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 const Sequelize = require("sequelize");
 
-const Skills = sequelize.define("Skills", {
+const EmployeeSkills = sequelize.define("EmployeeSkills", {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
         allowNull: false,
     },
-    name: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    technology: {
+    employeeId: {
         type: DataTypes.INTEGER,
-        allowNull: false
-    },
-    status: {
-        type: DataTypes.STRING,
         allowNull: false,
+        references: {
+            model: 'Employees',
+            key: 'id'
+        }
+    },
+    skillId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'Skills',
+            key: 'id'
+        }
     },
     createdBy: {
         type: DataTypes.STRING,
@@ -38,4 +42,4 @@ const Skills = sequelize.define("Skills", {
     }
 });
 
-module.exports = { Skills };
+module.exports = { EmployeeSkills };
