@@ -13,18 +13,16 @@ const Employees = sequelize.define("Employees", {
     emp_alias: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true
     },
     email: {
         type: DataTypes.STRING,
         allowNull: true,
+        unique: true
     },
     technology: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        references: {
-            model: 'Technologies',
-            key: 'id'
-        }
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: false
     },
     skills: {
         type: DataTypes.ARRAY(DataTypes.INTEGER),

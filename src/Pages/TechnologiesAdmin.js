@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom"
 import {
     DownOutlined
 } from '@ant-design/icons';
-import { Space, Table, Dropdown, Button, Form, Input, Select, Menu } from 'antd';
+import { Space, Table, Dropdown, Button, Form, Input, Select, Menu, Row, Col, Alert, notification, Popconfirm } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import Highlighter from 'react-highlight-words';
 import { useMutation, useQuery, useQueryClient } from 'react-query'
@@ -20,6 +20,17 @@ function TechnologiesAdmin(props) {
     const [searchedColumn, setSearchedColumn] = useState('');
     const searchInput = useRef(null);
     const queryClient = useQueryClient()
+    const [errors, setErrors] = useState(null)
+    const [api, contextHolder] = notification.useNotification();
+
+    const openNotification = (type) => {
+        let description = type === 'create' ? 'Technology created successfully' : 'Technology updated successfully'
+        api.info({
+          message: 'Action Successful',
+          description,
+          placement: 'topRight',
+        });
+      };
 
     const { isLoading: techsLoading, data: techData } = useQuery('technologies', () =>
         fetch('http://localhost:3001/admin/get-technologies', {
@@ -47,15 +58,24 @@ function TechnologiesAdmin(props) {
             res.json()
         ), {
         onSuccess: (data, variables, context) => {
-            setShowAddEditForm(false)
-            form.resetFields()
-            queryClient.invalidateQueries('technologies')
+            if (data.error) {
+                if (data.error?.errors) {
+                    let errors = data.error.errors
+                    setErrors(errors)
+                }
+            } else {
+                setErrors([])
+                openNotification('create')
+                setShowAddEditForm(false)
+                form.resetFields()
+                queryClient.invalidateQueries('technologies')
+            }
         }
     }
     )
 
     const { isLoading: editTechLoading, isSuccess: editTechSuccess, mutate: editTechMutate } = useMutation('edit-technology', (data) =>
-        fetch('http://localhost:3001/admin/update-technology/'+data.key, {
+        fetch('http://localhost:3001/admin/update-technology/' + data.key, {
             method: 'PUT',
             headers: {
                 'Accept': 'application/json',
@@ -67,15 +87,24 @@ function TechnologiesAdmin(props) {
             res.json()
         ), {
         onSuccess: (data, variables, context) => {
-            setShowAddEditForm(false)
-            form.resetFields()
-            queryClient.invalidateQueries('technologies')
+            if (data.error) {
+                if (data.error?.errors) {
+                    let errors = data.error.errors
+                    setErrors(errors)
+                }
+            } else {
+                setErrors([])
+                openNotification('update')
+                setShowAddEditForm(false)
+                form.resetFields()
+                queryClient.invalidateQueries('technologies')
+            }
         }
     }
     )
 
     const { isLoading: deleteTechLoading, isSuccess: deleteTechSuccess, mutate: deleteTechMutate } = useMutation('delete-technology', (data) =>
-        fetch('http://localhost:3001/admin/delete-technology/'+data.key, {
+        fetch('http://localhost:3001/admin/delete-technology/' + data.key, {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',
@@ -187,9 +216,9 @@ function TechnologiesAdmin(props) {
     });
 
     const changeStatus = (record) => {
-        if(record.status === 'Active'){
+        if (record.status === 'Active') {
             record.status = 'Inactive'
-        }else{
+        } else {
             record.status = 'Active'
         }
         editTechMutate(record)
@@ -229,9 +258,17 @@ function TechnologiesAdmin(props) {
             {
                 key: '3',
                 label: (
-                    <a onClick={() => deleteRecord(record)}>
-                        Delete
-                    </a>
+                    <Popconfirm
+                        title="Are you sure to delete this Developer?"
+                        onConfirm={() => deleteRecord(record)}
+                        onCancel={() => console.log('cancel')}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <a>
+                            Delete
+                        </a>
+                    </Popconfirm>
                 )
             }
         ]
@@ -295,7 +332,7 @@ function TechnologiesAdmin(props) {
 
     const submitTechnologies = (values) => {
         console.log(values)
-        if(values.key) {
+        if (values.key) {
             editTechMutate(values)
         } else {
             addTechMutate(values)
@@ -318,32 +355,39 @@ function TechnologiesAdmin(props) {
 
     return (
         <div>
+            {contextHolder}
             <div className="flex justify-between">
                 <h1>Technologies</h1>
                 <Button type="primary" onClick={() => setShowAddEditForm((prev) => !prev)}>
-                    {`${showAddEditForm ? 'Close' : 'Add Technology'}`}
+                    {`${showAddEditForm ? 'Back' : 'Add Technology'}`}
                 </Button>
             </div>
 
             {
                 showAddEditForm && (
-                    <div className="flex justify-center">
-                        <Form form={form} name="control-hooks" className="w-1/2" onFinish={submitTechnologies}>
+                    <div className="flex justify-center mt-7">
+                        <Form form={form} name="control-hooks" className="w-full" onFinish={submitTechnologies}>
                             <Form.Item name="key" label="Key" hidden>
                                 <Input />
                             </Form.Item>
-                            <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-                                <Input />
-                            </Form.Item>
-                            <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="active">
-                                <Select
-                                    placeholder="Set Status"
-                                    allowClear
-                                >
-                                    <Option value="active">Active</Option>
-                                    <Option value="inactive">Inactive</Option>
-                                </Select>
-                            </Form.Item>
+                            <Row gutter={16}>
+                                <Col span={12}>
+                                    <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+                                        <Input />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="active">
+                                        <Select
+                                            placeholder="Set Status"
+                                            allowClear
+                                        >
+                                            <Option value="active">Active</Option>
+                                            <Option value="inactive">Inactive</Option>
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                            </Row>
 
                             <div className="flex justify-end">
                                 <Form.Item>
@@ -352,14 +396,26 @@ function TechnologiesAdmin(props) {
                                     </Button>
                                     {
                                         !form.getFieldValue('key') && (
-                                        <Button htmlType="button" onClick={onReset}>
-                                            Reset
-                                        </Button>
+                                            <Button htmlType="button" onClick={onReset}>
+                                                Reset
+                                            </Button>
                                         )
-                                     }
+                                    }
                                 </Form.Item>
                             </div>
                         </Form>
+                    </div>
+                )
+            }
+
+            {
+                errors && (
+                    <div className="flex justify-center mt-5">
+                        {
+                            errors.map((error) => (
+                                <Alert message={error.message} type="error" showIcon />
+                            ))
+                        }
                     </div>
                 )
             }

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom"
 import {
     DownOutlined
 } from '@ant-design/icons';
-import { Space, Table, Dropdown, Button, Form, Input, Select, Menu, Tag, Row, Col } from 'antd';
+import { Space, Table, Dropdown, Button, Form, Input, Select, Menu, Tag, Row, Col, Alert, notification, Popconfirm } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import Highlighter from 'react-highlight-words';
 import { useMutation, useQuery, useQueryClient } from 'react-query'
@@ -21,6 +21,17 @@ function EmployeesAdmin(props) {
     const searchInput = useRef(null);
     const queryClient = useQueryClient()
     const [skills, setSkills] = useState([])
+    const [errors, setErrors] = useState([])
+    const [api, contextHolder] = notification.useNotification();
+
+    const openNotification = (type) => {
+        let description = type === 'create' ? 'Developer created successfully' : 'Developer updated successfully'
+        api.info({
+          message: 'Action Successful',
+          description,
+          placement: 'topRight',
+        });
+      };
 
     const { isLoading: techsLoading, data: techData } = useQuery('technologies-skills', () =>
         fetch('http://localhost:3001/admin/get-technologies-skills', {
@@ -74,9 +85,18 @@ function EmployeesAdmin(props) {
             res.json()
         ), {
         onSuccess: (data, variables, context) => {
-            setShowAddEditForm(false)
-            form.resetFields()
-            queryClient.invalidateQueries('employees')
+            if(data.error) {
+                if(data.error?.errors) {
+                    let errors = data.error.errors
+                    setErrors(errors)
+                }
+            } else {
+                setErrors([])
+                openNotification('create')
+                setShowAddEditForm(false)
+                form.resetFields()
+                queryClient.invalidateQueries('employees')
+            }     
         }
     }
     )
@@ -94,9 +114,18 @@ function EmployeesAdmin(props) {
             res.json()
         ), {
         onSuccess: (data, variables, context) => {
-            setShowAddEditForm(false)
-            form.resetFields()
-            queryClient.invalidateQueries('employees')
+            if(data.error) {
+                if(data.error?.errors) {
+                    let errors = data.error.errors
+                    setErrors(errors)
+                }
+            } else {
+                setErrors([])
+                openNotification('update')
+                setShowAddEditForm(false)
+                form.resetFields()
+                queryClient.invalidateQueries('employees')
+            }  
         }
     }
     )
@@ -236,18 +265,32 @@ function EmployeesAdmin(props) {
             })
         }
 
-        techData.data.find((item) => {
-            if (parseInt(item.key) === parseInt(record.technologyId)) {
-                setSkills(item.skills)
-            }
+        let technologies = []
+        if (record.technology) {
+            technologies = record.technology?.length && record.technology.indexOf(',') > -1 ? record.technology.split(',') : [`${record.technology}`]
+            technologies = techData.data.filter((technology) => {
+                if (technologies.indexOf(`${technology.key}`) > -1) {
+                    return true
+                }
+                return false
+            })
         }
-        )
+
+        let values = record.technology?.length && record.technology.indexOf(',') > -1 ? record.technology.split(',') : [`${record.technology}`]
+        values = values.map((item) => parseInt(item)) 
+        let selectedSkills = []
+        techData.data.find((item) => {
+            if (values.includes(parseInt(item.key))) {
+                selectedSkills.push(...item.skills)
+            }
+        })
+        setSkills(selectedSkills)
 
         form.setFieldsValue({
             key: record.key,
             alias: record.alias,
             email: record.email,
-            technology: record.technologyId,
+            technology: technologies,
             skills: skills,
             status: record.status,
             manager: record.manager,
@@ -281,9 +324,18 @@ function EmployeesAdmin(props) {
             {
                 key: '3',
                 label: (
-                    <a onClick={() => deleteRecord(record)}>
-                        Delete
-                    </a>
+                    <Popconfirm
+                        title="Are you sure to delete this Developer?"
+                        onConfirm={() => deleteRecord(record)}
+                        onCancel={() => console.log('cancel')}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <a>
+                            Delete
+                        </a>
+                    </Popconfirm>
+                    
                 )
             }
         ]
@@ -313,13 +365,36 @@ function EmployeesAdmin(props) {
             sortDirections: ['descend', 'ascend'],
         },
         {
-            title: 'Technology',
+            title: 'Technologies',
             dataIndex: 'technology',
             key: 'technology',
             width: '20%',
             ...getColumnSearchProps('technology'),
             sorter: (a, b) => a.technology.length - b.technology.length,
             sortDirections: ['descend', 'ascend'],
+            render: (_, { technology }) => {
+                let tags = []
+                tags = technology?.length && technology.indexOf(',') > -1 ? technology.split(',') : [`${technology}`]
+                
+                tags = techData.data.filter((tech) => {
+                    if (tags.includes(`${tech.key}`)) {
+                        return true
+                    }
+                    return false
+                })
+                return (
+                    <>
+                        {tags.map(tech => {
+                            let color = 'orange';
+                            return (
+                                <Tag color={color} key={tech.key}>
+                                    {tech.name.toUpperCase()}
+                                </Tag>
+                            );
+                        })}
+                    </>
+                )
+            },
         },
         {
             title: 'Skillsets',
@@ -362,7 +437,7 @@ function EmployeesAdmin(props) {
             sortDirections: ['descend', 'ascend'],
         },
         {
-            title: 'Sporting Manager',
+            title: 'Supporting Manager',
             dataIndex: 'sporting_manager',
             key: 'sporting_manager',
             width: '20%',
@@ -400,6 +475,18 @@ function EmployeesAdmin(props) {
     const submitEmployees = (values) => {
         console.log(values)
         if (values.key) {
+            if(values.technology.length || values.skills.length) {
+                if(isNaN(values.technology[0])) {
+                    values.technology = values.technology.map((tech) => {
+                        return tech.key
+                    })
+                }
+                if(isNaN(values.skills[0])) {
+                    values.skills = values.skills.map((skill) => {
+                        return skill.key
+                    })
+                }
+            }
             editEmployeeMutate(values)
         } else {
             addEmployeeMutate(values)
@@ -421,17 +508,18 @@ function EmployeesAdmin(props) {
     }, [])
 
     const handleTechnologyChange = (value) => {
+        let values = value.map((item) => parseInt(item)) 
+        let skills = []
         techData.data.find((item) => {
-            if (parseInt(item.key) === parseInt(value)) {
-                setSkills(item.skills)
+            if (values.includes(parseInt(item.key))) {
+                skills.push(...item.skills)
             }
-        }
-        )
+        })
+        setSkills(skills)
     }
 
     const layout = {
-        labelCol: { span: 6 },
-        wrapperCol: { span: 18 },
+        labelCol: { span: 8 },
     };
 
     const tailLayout = {
@@ -440,16 +528,17 @@ function EmployeesAdmin(props) {
 
     return (
         <div>
+            {contextHolder}
             <div className="flex justify-between">
-                <h1>Employees</h1>
+                <h1>Developers</h1>
                 <Button type="primary" onClick={() => setShowAddEditForm((prev) => !prev)}>
-                    {`${showAddEditForm ? 'Close' : 'Add Employee'}`}
+                    {`${showAddEditForm ? 'Back' : 'Add Developer'}`}
                 </Button>
             </div>
 
             {
                 showAddEditForm && (
-                    <div className="flex justify-center flex-col mt-5 mr-5">
+                    <div className="flex justify-start mt-5 -ml-28">
                         <Form form={form} {...layout} name="control-hooks" className="w-full" onFinish={submitEmployees}>
                             <Form.Item name="key" label="Key" hidden>
                                 <Input />
@@ -476,6 +565,7 @@ function EmployeesAdmin(props) {
                                 <Col span={12}>
                             <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
                                 <Select
+                                    mode="multiple"
                                     placeholder="Set Technology"
                                     allowClear
                                     onChange={(e) => handleTechnologyChange(e)}
@@ -514,7 +604,7 @@ function EmployeesAdmin(props) {
                             </Col>
 
                             <Col span={12}>
-                            <Form.Item name="sporting_manager" label="Sporting Manager" rules={[{ required: true }]}>
+                            <Form.Item name="sporting_manager" label="Supporting Manager" rules={[{ required: true }]}>
                                 <Input />
                             </Form.Item>
                             </Col>
@@ -533,16 +623,34 @@ function EmployeesAdmin(props) {
                             </Form.Item>
                             </Col>
                             </Row>
-                        </Form>
 
-                        <div className="flex justify-end">
-                                <Button type="primary" htmlType="submit" className="mr-2">
-                                    Submit
-                                </Button>
-                                <Button htmlType="button" onClick={onReset}>
-                                    Reset
-                                </Button>
-                        </div>
+                            <div className="flex justify-end">
+                                <Form.Item>
+                                    <Button type="primary" htmlType="submit" className="mr-2">
+                                        Submit
+                                    </Button>
+                                    {
+                                        !form.getFieldValue('key') && (
+                                            <Button htmlType="button" onClick={onReset}>
+                                                Reset
+                                            </Button>
+                                        )
+                                    }
+                                </Form.Item>
+                            </div>
+                        </Form>
+                    </div>
+                )
+            }
+
+            {
+                errors && (
+                    <div className="flex justify-center mt-5">
+                        {
+                            errors.map((error) => (
+                                <Alert message={error.message} type="error" showIcon />
+                            ))
+                        }
                     </div>
                 )
             }

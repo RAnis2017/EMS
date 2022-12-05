@@ -291,16 +291,7 @@ router.get('/get-technologies-skills', async (req, res, next) => {
 router.get('/get-employees', async (req, res, next) => {
 
     await Employees.sync();
-    await Technologies.sync();
-
-    Employees.belongsTo(Technologies, { foreignKey: 'technology', targetKey: 'id' });
-    Technologies.hasMany(Employees, { foreignKey: 'technology', sourceKey: 'id' });
-
-    Employees.findAll({
-        include: [{
-            model: Technologies
-        }]
-    }).then((employees) => {
+    Employees.findAll({}).then((employees) => {
         if (!employees) {
             res.status(400).json({ error: 'Employees not found' });
         } else {
@@ -311,8 +302,7 @@ router.get('/get-employees', async (req, res, next) => {
                     alias: employee.emp_alias,
                     email: employee.email,
                     skills: employee.skills,
-                    technology: employee.Technology.name,
-                    technologyId: employee.technology,
+                    technology: employee.technology,
                     manager: employee.manager,
                     sporting_manager: employee.sporting_manager,
                     status: employee.status[0].toUpperCase() + employee.status.slice(1),
@@ -360,7 +350,7 @@ router.put('/update-employee/:id', async (req, res, next) => {
         emp_alias: req.body.alias,
         email: req.body.email,
         skills: req.body.skills?.length && req.body.skills.indexOf(',') > -1 ? req.body.skills.split(',') : [`${req.body.skills}`],
-        technology: req.body.technologyId,
+        technology: req.body.technology,
         manager: req.body.manager,
         sporting_manager: req.body.sporting_manager,
         status: req.body.status,
