@@ -23,6 +23,9 @@ function EmployeesAdmin(props) {
     const [skills, setSkills] = useState([])
     const [errors, setErrors] = useState([])
     const [api, contextHolder] = notification.useNotification();
+    const [managers, setManagers] = useState([])
+    const [supportingManagers, setSupportingManagers] = useState([])
+    const [filters, setFilters] = useState([])
 
     const openNotification = (type) => {
         let description = type === 'create' ? 'Developer created successfully' : 'Developer updated successfully'
@@ -69,8 +72,45 @@ function EmployeesAdmin(props) {
             }
         }).then(res =>
             res.json()
-        )
-    )
+        ), {
+        onSuccess: (data) => {
+            // get all managers and supporting managers
+            let managers = []
+            let supportingManagers = []
+            data?.data?.forEach(employee => {
+                if(!managers.includes(employee.manager)) {
+                    managers.push(employee.manager)
+                }
+                if(!supportingManagers.includes(employee.sporting_manager)) {
+                    supportingManagers.push(employee.sporting_manager)
+                }
+            })
+
+            setManagers(managers)
+            setSupportingManagers(supportingManagers)
+
+            // use filters to filter data
+            filters.manager && (data.data = data.data.filter(employee => filters.manager.includes(employee.manager)))
+            filters.sporting_manager && (data.data = data.data.filter(employee => filters.sporting_manager.includes(employee.sporting_manager)))
+            
+            if(filters.skills) {
+                data.data = data.data.filter(employee => {
+                    let employeeSkills = employee.skills.toString().split(',').map(skill => parseInt(skill.trim()))
+                    let result = employeeSkills.filter(skill => filters.skills.includes(skill))
+                    return result.length > 0
+                })
+            }
+
+            if(filters.technology) {
+                data.data = data.data.filter(employee => {
+                    let employeeTechnologies = employee.technology.toString().split(',').map(technology => parseInt(technology.trim()))
+                    let result = employeeTechnologies.filter(technology => filters.technology.includes(technology))
+                    return result.length > 0
+                })
+            }
+            
+        }
+    })
 
     const { isLoading: addEmployeeLoading, isSuccess: addEmployeeSuccess, mutate: addEmployeeMutate } = useMutation('add-employees', (data) =>
         fetch('http://localhost:3001/admin/add-employee', {
@@ -376,7 +416,7 @@ function EmployeesAdmin(props) {
                 let tags = []
                 tags = technology?.length && technology.indexOf(',') > -1 ? technology.split(',') : [`${technology}`]
                 
-                tags = techData.data.filter((tech) => {
+                tags = techData?.data?.filter((tech) => {
                     if (tags.includes(`${tech.key}`)) {
                         return true
                     }
@@ -518,6 +558,27 @@ function EmployeesAdmin(props) {
         setSkills(skills)
     }
 
+    const handleFilterSelect = (value, type) => {
+        let filter = {}
+        if(type === 'manager') {
+            filter['manager'] = value
+        } else if(type === 'sporting_manager') {
+            filter['sporting_manager'] = value
+        } else if(type === 'technology') {
+            filter['technology'] = value
+        } else if(type === 'skills') {
+            filter['skills'] = value
+        }
+
+        filter.manager?.length < 1 && delete filter.manager
+        filter.sporting_manager?.length < 1 && delete filter.sporting_manager
+        filter.technology?.length < 1 && delete filter.technology
+        filter.skills?.length < 1 && delete filter.skills
+        setFilters(filter)
+
+        queryClient.invalidateQueries('employees')
+    }
+
     const layout = {
         labelCol: { span: 8 },
     };
@@ -534,6 +595,67 @@ function EmployeesAdmin(props) {
                 <Button type="primary" onClick={() => setShowAddEditForm((prev) => !prev)}>
                     {`${showAddEditForm ? 'Back' : 'Add Developer'}`}
                 </Button>
+            </div>
+
+            <div>
+                <h3>Filters</h3>
+                <div className="flex justify-start flex-row">
+                    <Select
+                        mode="multiple"
+                        className="w-1/4"
+                        placeholder="Filter by Manager"
+                        onChange={(e) => handleFilterSelect(e, 'manager')}
+                        allowClear
+                    >
+                        {
+                            managers?.map((manager, key) => (
+                                <Option key={key} value={manager}>{manager}</Option>
+                            ))
+                        }
+                    </Select>
+
+                     <Select
+                        mode="multiple"
+                        className="w-1/4 !ml-5"
+                        placeholder="Filter by Supporting Manager"
+                        onChange={(e) => handleFilterSelect(e, 'sporting_manager')}
+                        allowClear
+                    >
+                        {
+                            supportingManagers?.map((manager, key) => (
+                                <Option key={key} value={manager}>{manager}</Option>
+                            ))
+                        }
+                    </Select>
+
+                    <Select
+                        mode="multiple"
+                        className="w-1/4 !ml-5"
+                        placeholder="Filter by Technology"
+                        onChange={(e) => handleFilterSelect(e, 'technology')}
+                        allowClear
+                    >
+                        {
+                            techData?.data?.map((tech) => (
+                                <Option key={tech.key} value={tech.key}>{tech.name}</Option>
+                            ))
+                        }
+                    </Select>
+
+                    <Select
+                        mode="multiple"
+                        className="w-1/4 !ml-5"
+                        placeholder="Filter by Skills"
+                        onChange={(e) => handleFilterSelect(e, 'skills')}
+                        allowClear
+                    >
+                        {
+                            skillData?.data?.map((skill) => (
+                                <Option key={skill.key} value={skill.key}>{skill.name}</Option>
+                            ))
+                        }
+                    </Select>
+                </div>
             </div>
 
             {
