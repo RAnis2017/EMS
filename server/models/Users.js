@@ -40,6 +40,14 @@ const Users = sequelize.define("Users", {
         type: DataTypes.BOOLEAN,
         allowNull: false,
     },
+    created_by: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    updated_by: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     created_date: {
         type: DataTypes.DATE,
         allowNull: false,

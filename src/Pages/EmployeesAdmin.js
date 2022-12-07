@@ -424,7 +424,7 @@ function EmployeesAdmin(props) {
                 })
                 return (
                     <>
-                        {tags.map(tech => {
+                        {tags?.map(tech => {
                             let color = 'orange';
                             return (
                                 <Tag color={color} key={tech.key}>

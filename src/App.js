@@ -29,6 +29,7 @@ import { Layout, Menu } from 'antd';
 import TechnologiesAdmin from "./Pages/TechnologiesAdmin";
 import SkillsetAdmin from "./Pages/SkillsetAdmin";
 import EmployeesAdmin from "./Pages/EmployeesAdmin";
+import UsersAdmin from "./Pages/UsersAdmin";
 
 const { Header, Sider, Content } = Layout;
 
@@ -101,6 +102,13 @@ const AppOutlet = () => {
                 },
                 {
                   key: '5',
+                  icon: <UserOutlined />,
+                  label: 'Users',
+                  to: '/admin/users',
+                  onClick: () => navigate('/admin/users')
+                },
+                {
+                  key: '6',
                   icon: <LogoutOutlined />,
                   label: 'Logout',
                   onClick: () => signOut()
@@ -154,6 +162,7 @@ function App() {
             <Route path="admin/technologies" element={<TechnologiesAdmin />} />
             <Route path="admin/skillsets" element={<SkillsetAdmin />} />
             <Route path="admin/developers" element={<EmployeesAdmin />} />
+            <Route path="admin/users" element={<UsersAdmin />} />
           </Route>
           <Route path="*" element={<Login />} />
         </Routes>

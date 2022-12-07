@@ -1,9 +1,11 @@
 require('dotenv').config()
 var express = require('express');
 var router = express.Router();
+const bcrypt = require('bcrypt');
 const Technologies = require('../models/Technologies').Technologies;
 const Skills = require('../models/Skills').Skills;
 const Employees = require('../models/Employees').Employees;
+const Users = require('../models/Users').Users;
 const multer = require('multer');
 const storage = multer.diskStorage({
     destination: (req, file, callBack) => {
@@ -383,6 +385,116 @@ router.delete('/delete-employee/:id', async (req, res, next) => {
             res.status(400).json({ error: 'Employee not deleted' });
         } else {
             res.status(200).json({ message: 'Employee deleted successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+
+router.get('/get-users', async (req, res, next) => {
+
+    await Users.sync();
+    Users.findAll({}).then((users) => {
+        if (!users) {
+            res.status(400).json({ error: 'Users not found' });
+        } else {
+            let data = [];
+            users.forEach((user) => {
+                data.push({
+                    key: user.id,
+                    alias: user.alias,
+                    email: user.email,
+                    username: user.username,
+                    name: user.name,
+                    password: '********',
+                    status: user.status[0].toUpperCase() + user.status.slice(1),
+                    createdBy: user.created_by,
+                    createdDate: new Date(user.created_date).toLocaleDateString(),
+                })
+            })
+
+            res.status(200).json({ data });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.post('/add-user', async (req, res, next) => {
+
+    await Users.sync();
+
+    // password encryption
+    let hash = bcrypt.hashSync(req.body.password, 12);
+
+    Users.create({
+        alias: req.body.alias,
+        email: req.body.email,
+        username: req.body.username,
+        password: hash,
+        name: req.body.name,
+        status: req.body.status,
+        created_by: req.user.alias
+    }).then((user) => {
+        if (!user) {
+            res.status(400).json({ error: 'User not created' });
+        } else {
+            res.status(200).json({ message: 'User created successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.put('/update-user/:id', async (req, res, next) => {
+    
+    await Users.sync();
+
+    // password encryption
+    let hash = bcrypt.hashSync(req.body.password, 12);
+
+    let updateObj = {
+        alias: req.body.alias,
+        email: req.body.email,
+        username: req.body.username,
+        name: req.body.name,
+        status: req.body.status,
+        updated_by: req.user.alias
+    }
+
+    if (req.body.password) {
+        updateObj.password = hash;
+    }
+
+    Users.update(updateObj, {
+        where: {
+            id: req.params.id
+        }
+    }).then((user) => {
+        if (!user) {
+            res.status(400).json({ error: 'User not updated' });
+        } else {
+            res.status(200).json({ message: 'User updated successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.delete('/delete-user/:id', async (req, res, next) => {
+    
+    await Users.sync();
+
+    Users.destroy({
+        where: {
+            id: req.params.id
+        }
+    }).then((user) => {
+        if (!user) {
+            res.status(400).json({ error: 'User not deleted' });
+        } else {
+            res.status(200).json({ message: 'User deleted successfully' });
         }
     }).catch((err) => {
         res.status(400).json({ error: err });
