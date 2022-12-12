@@ -408,6 +408,7 @@ router.get('/get-users', async (req, res, next) => {
                     username: user.username,
                     name: user.name,
                     password: '********',
+                    isAdmin: user.isAdmin,
                     status: user.status[0].toUpperCase() + user.status.slice(1),
                     createdBy: user.created_by,
                     createdDate: new Date(user.created_date).toLocaleDateString(),
@@ -434,6 +435,7 @@ router.post('/add-user', async (req, res, next) => {
         username: req.body.username,
         password: hash,
         name: req.body.name,
+        isAdmin: req.body.isAdmin,
         status: req.body.status,
         created_by: req.user.alias
     }).then((user) => {
@@ -459,6 +461,7 @@ router.put('/update-user/:id', async (req, res, next) => {
         email: req.body.email,
         username: req.body.username,
         name: req.body.name,
+        isAdmin: req.body.isAdmin,
         status: req.body.status,
         updated_by: req.user.alias
     }

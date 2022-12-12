@@ -26,15 +26,16 @@ function EmployeesAdmin(props) {
     const [managers, setManagers] = useState([])
     const [supportingManagers, setSupportingManagers] = useState([])
     const [filters, setFilters] = useState([])
+    const [selectedSkills, setSelectedSkills] = useState([])
 
     const openNotification = (type) => {
         let description = type === 'create' ? 'Developer created successfully' : 'Developer updated successfully'
         api.info({
-          message: 'Action Successful',
-          description,
-          placement: 'topRight',
+            message: 'Action Successful',
+            description,
+            placement: 'topRight',
         });
-      };
+    };
 
     const { isLoading: techsLoading, data: techData } = useQuery('technologies-skills', () =>
         fetch('http://localhost:3001/admin/get-technologies-skills', {
@@ -78,10 +79,10 @@ function EmployeesAdmin(props) {
             let managers = []
             let supportingManagers = []
             data?.data?.forEach(employee => {
-                if(!managers.includes(employee.manager)) {
+                if (!managers.includes(employee.manager)) {
                     managers.push(employee.manager)
                 }
-                if(!supportingManagers.includes(employee.sporting_manager)) {
+                if (!supportingManagers.includes(employee.sporting_manager)) {
                     supportingManagers.push(employee.sporting_manager)
                 }
             })
@@ -92,8 +93,8 @@ function EmployeesAdmin(props) {
             // use filters to filter data
             filters.manager && (data.data = data.data.filter(employee => filters.manager.includes(employee.manager)))
             filters.sporting_manager && (data.data = data.data.filter(employee => filters.sporting_manager.includes(employee.sporting_manager)))
-            
-            if(filters.skills) {
+
+            if (filters.skills) {
                 data.data = data.data.filter(employee => {
                     let employeeSkills = employee.skills.toString().split(',').map(skill => parseInt(skill.trim()))
                     let result = employeeSkills.filter(skill => filters.skills.includes(skill))
@@ -101,14 +102,14 @@ function EmployeesAdmin(props) {
                 })
             }
 
-            if(filters.technology) {
+            if (filters.technology) {
                 data.data = data.data.filter(employee => {
                     let employeeTechnologies = employee.technology.toString().split(',').map(technology => parseInt(technology.trim()))
                     let result = employeeTechnologies.filter(technology => filters.technology.includes(technology))
                     return result.length > 0
                 })
             }
-            
+
         }
     })
 
@@ -125,8 +126,8 @@ function EmployeesAdmin(props) {
             res.json()
         ), {
         onSuccess: (data, variables, context) => {
-            if(data.error) {
-                if(data.error?.errors) {
+            if (data.error) {
+                if (data.error?.errors) {
                     let errors = data.error.errors
                     setErrors(errors)
                 }
@@ -136,7 +137,7 @@ function EmployeesAdmin(props) {
                 setShowAddEditForm(false)
                 form.resetFields()
                 queryClient.invalidateQueries('employees')
-            }     
+            }
         }
     }
     )
@@ -154,8 +155,8 @@ function EmployeesAdmin(props) {
             res.json()
         ), {
         onSuccess: (data, variables, context) => {
-            if(data.error) {
-                if(data.error?.errors) {
+            if (data.error) {
+                if (data.error?.errors) {
                     let errors = data.error.errors
                     setErrors(errors)
                 }
@@ -165,7 +166,7 @@ function EmployeesAdmin(props) {
                 setShowAddEditForm(false)
                 form.resetFields()
                 queryClient.invalidateQueries('employees')
-            }  
+            }
         }
     }
     )
@@ -317,7 +318,7 @@ function EmployeesAdmin(props) {
         }
 
         let values = record.technology?.length && record.technology.indexOf(',') > -1 ? record.technology.split(',') : [`${record.technology}`]
-        values = values.map((item) => parseInt(item)) 
+        values = values.map((item) => parseInt(item))
         let selectedSkills = []
         techData.data.find((item) => {
             if (values.includes(parseInt(item.key))) {
@@ -375,7 +376,7 @@ function EmployeesAdmin(props) {
                             Delete
                         </a>
                     </Popconfirm>
-                    
+
                 )
             }
         ]
@@ -415,7 +416,7 @@ function EmployeesAdmin(props) {
             render: (_, { technology }) => {
                 let tags = []
                 tags = technology?.length && technology.indexOf(',') > -1 ? technology.split(',') : [`${technology}`]
-                
+
                 tags = techData?.data?.filter((tech) => {
                     if (tags.includes(`${tech.key}`)) {
                         return true
@@ -447,7 +448,7 @@ function EmployeesAdmin(props) {
             render: (_, { skills }) => {
                 let tags = []
                 tags = skills?.length && skills.indexOf(',') > -1 ? skills.split(',') : [`${skills}`]
-                tags = skillData.data.filter((skill) => {
+                tags = skillData?.data?.filter((skill) => {
                     if (tags.includes(`${skill.key}`)) {
                         return true
                     }
@@ -455,7 +456,7 @@ function EmployeesAdmin(props) {
                 })
                 return (
                     <>
-                        {tags.map(skill => {
+                        {tags?.map(skill => {
                             let color = 'geekblue';
                             return (
                                 <Tag color={color} key={skill.key}>
@@ -515,13 +516,13 @@ function EmployeesAdmin(props) {
     const submitEmployees = (values) => {
         console.log(values)
         if (values.key) {
-            if(values.technology.length || values.skills.length) {
-                if(isNaN(values.technology[0])) {
+            if (values.technology.length || values.skills.length) {
+                if (isNaN(values.technology[0])) {
                     values.technology = values.technology.map((tech) => {
                         return tech.key
                     })
                 }
-                if(isNaN(values.skills[0])) {
+                if (isNaN(values.skills[0])) {
                     values.skills = values.skills.map((skill) => {
                         return skill.key
                     })
@@ -548,7 +549,7 @@ function EmployeesAdmin(props) {
     }, [])
 
     const handleTechnologyChange = (value) => {
-        let values = value.map((item) => parseInt(item)) 
+        let values = value.map((item) => parseInt(item))
         let skills = []
         techData.data.find((item) => {
             if (values.includes(parseInt(item.key))) {
@@ -556,17 +557,27 @@ function EmployeesAdmin(props) {
             }
         })
         setSkills(skills)
+
+        // check if selected skills are not in the list of skills
+        let skillsId = skills.map((item) => parseInt(item.id))
+        let selectedSkillsD = selectedSkills.filter((item) => {
+            if (skillsId.includes(parseInt(item))) {
+                return true
+            }
+            return false
+        })
+        form.setFieldsValue({ skills: selectedSkillsD })
     }
 
     const handleFilterSelect = (value, type) => {
         let filter = {}
-        if(type === 'manager') {
+        if (type === 'manager') {
             filter['manager'] = value
-        } else if(type === 'sporting_manager') {
+        } else if (type === 'sporting_manager') {
             filter['sporting_manager'] = value
-        } else if(type === 'technology') {
+        } else if (type === 'technology') {
             filter['technology'] = value
-        } else if(type === 'skills') {
+        } else if (type === 'skills') {
             filter['skills'] = value
         }
 
@@ -579,8 +590,13 @@ function EmployeesAdmin(props) {
         queryClient.invalidateQueries('employees')
     }
 
+    const handleSkillChange = (value) => {
+        setSelectedSkills(value)
+    }
+
     const layout = {
         labelCol: { span: 8 },
+        wrapperCol: { span: 13 },
     };
 
     const tailLayout = {
@@ -592,12 +608,12 @@ function EmployeesAdmin(props) {
             {contextHolder}
             <div className="flex justify-between">
                 <h1>Developers</h1>
-                <Button type="primary" onClick={() => setShowAddEditForm((prev) => !prev)}>
+                <Button type="primary" onClick={() => setShowAddEditForm((prev) => { form.resetFields(); return !prev })}>
                     {`${showAddEditForm ? 'Back' : 'Add Developer'}`}
                 </Button>
             </div>
 
-            <div>
+            <div hidden={showAddEditForm}>
                 <h3>Filters</h3>
                 <div className="flex justify-start flex-row">
                     <Select
@@ -614,7 +630,7 @@ function EmployeesAdmin(props) {
                         }
                     </Select>
 
-                     <Select
+                    <Select
                         mode="multiple"
                         className="w-1/4 !ml-5"
                         placeholder="Filter by Supporting Manager"
@@ -660,7 +676,7 @@ function EmployeesAdmin(props) {
 
             {
                 showAddEditForm && (
-                    <div className="flex justify-start mt-5 -ml-28">
+                    <div className="flex justify-start mt-5">
                         <Form form={form} {...layout} name="control-hooks" className="w-full" onFinish={submitEmployees}>
                             <Form.Item name="key" label="Key" hidden>
                                 <Input />
@@ -668,82 +684,84 @@ function EmployeesAdmin(props) {
                             <Form.Item name="technologyId" label="technologyId" hidden>
                                 <Input />
                             </Form.Item>
-                            
-                            <Row>
-                                <Col span={12}>
-                            <Form.Item name="alias" label="Alias" rules={[{ required: true }]}>
-                                <Input />
-                            </Form.Item>
-                            </Col>
 
-                            <Col span={12}>
-                            <Form.Item name="email" label="Email">
-                                <Input />
-                            </Form.Item>
-                            </Col>
-                            </Row>
-                          
                             <Row>
                                 <Col span={12}>
-                            <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
-                                <Select
-                                    mode="multiple"
-                                    placeholder="Set Technology"
-                                    allowClear
-                                    onChange={(e) => handleTechnologyChange(e)}
-                                >
-                                    {
-                                        techData.data.map((tech) => (
-                                            <Option key={tech.key} value={tech.key}>{tech.name}</Option>
-                                        ))
-                                    }
-                                </Select>
-                            </Form.Item>
-                            </Col>
+                                    <Form.Item name="alias" label="Alias" labelAlign="left" rules={[{ required: true }]}>
+                                        <Input />
+                                    </Form.Item>
+                                </Col>
 
-                            <Col span={12}>
-                                
-                            <Form.Item name="skills" label="Skillsets">
-                                <Select
-                                    mode="multiple"
-                                    placeholder="Set Skillsets"
-                                    allowClear
-                                >
-                                    {
-                                        skills.map((skill) => (
-                                            <Option key={skill.id} value={skill.id}>{skill.name}</Option>
-                                        ))
-                                    }
-                                </Select>
-                            </Form.Item>
-                            </Col>
-                            </Row>
-                            <Row>
                                 <Col span={12}>
-                            <Form.Item name="manager" label="Manager" rules={[{ required: true }]}>
-                                <Input />
-                            </Form.Item>
-                            </Col>
+                                    <Form.Item name="email" labelAlign="left" label="Email">
+                                        <Input />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
 
-                            <Col span={12}>
-                            <Form.Item name="sporting_manager" label="Supporting Manager" rules={[{ required: true }]}>
-                                <Input />
-                            </Form.Item>
-                            </Col>
-                            </Row>
-                         
                             <Row>
                                 <Col span={12}>
-                            <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="active">
-                                <Select
-                                    placeholder="Set Status"
-                                    allowClear
-                                >
-                                    <Option value="active">Active</Option>
-                                    <Option value="inactive">Inactive</Option>
-                                </Select>
-                            </Form.Item>
-                            </Col>
+                                    <Form.Item name="technology" label="Technology" labelAlign="left" rules={[{ required: true }]}>
+                                        <Select
+                                            mode="multiple"
+                                            placeholder="Set Technology"
+                                            allowClear
+                                            onChange={(e) => handleTechnologyChange(e)}
+                                        >
+                                            {
+                                                techData.data.map((tech) => (
+                                                    <Option key={tech.key} value={tech.key}>{tech.name}</Option>
+                                                ))
+                                            }
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+
+                                <Col span={12}>
+
+                                    <Form.Item name="skills" labelAlign="left" label="Skillsets">
+                                        <Select
+                                            mode="multiple"
+                                            placeholder="Set Skillsets"
+                                            allowClear
+                                            onChange={(e) => handleSkillChange(e)}
+                                            value={selectedSkills}
+                                        >
+                                            {
+                                                skills.map((skill) => (
+                                                    <Option key={skill.id} value={skill.id}>{skill.name}</Option>
+                                                ))
+                                            }
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                            <Row>
+                                <Col span={12}>
+                                    <Form.Item name="manager" label="Manager" labelAlign="left" rules={[{ required: true }]}>
+                                        <Input />
+                                    </Form.Item>
+                                </Col>
+
+                                <Col span={12}>
+                                    <Form.Item name="sporting_manager" label="Supporting Manager" labelAlign="left" rules={[{ required: true }]}>
+                                        <Input />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+
+                            <Row>
+                                <Col span={12}>
+                                    <Form.Item name="status" label="Status" labelAlign="left" rules={[{ required: true }]} initialValue="active">
+                                        <Select
+                                            placeholder="Set Status"
+                                            allowClear
+                                        >
+                                            <Option value="active">Active</Option>
+                                            <Option value="inactive">Inactive</Option>
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
                             </Row>
 
                             <div className="flex justify-end">
@@ -751,6 +769,8 @@ function EmployeesAdmin(props) {
                                     <Button type="primary" htmlType="submit" className="mr-2">
                                         Submit
                                     </Button>
+                                </Form.Item>
+                                <Form.Item>
                                     {
                                         !form.getFieldValue('key') && (
                                             <Button htmlType="button" onClick={onReset}>

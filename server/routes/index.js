@@ -121,7 +121,7 @@ router.post('/login-google', function (req, res) {
   Users.findOne({
     where: {
       email: email,
-      status  : 'A'
+      status  : 'Active'
     }
   }).then(async (user) => {
     if (!user) {

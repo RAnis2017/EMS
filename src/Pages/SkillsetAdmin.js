@@ -377,12 +377,17 @@ function SkillsetAdmin(props) {
         }
     }, [])
 
+    const layout = {
+        labelCol: { span: 7 },
+        wrapperCol: { span: 14 },
+    };
+
     return (
         <div>
             {contextHolder}
             <div className="flex justify-between">
                 <h1>Skill Sets</h1>
-                <Button type="primary" onClick={() => setShowAddEditForm((prev) => !prev)}>
+                <Button type="primary" onClick={() => setShowAddEditForm((prev) =>{ form.resetFields(); return !prev})}>
                     {`${showAddEditForm ? 'Back' : 'Add Skillset'}`}
                 </Button>
             </div>
@@ -390,7 +395,7 @@ function SkillsetAdmin(props) {
             {
                 showAddEditForm && (
                     <div className="flex justify-center mt-7">
-                        <Form form={form} name="control-hooks" className="w-full" onFinish={submitSkills}>
+                        <Form form={form} {...layout} name="control-hooks" className="w-full" onFinish={submitSkills}>
                             <Form.Item name="key" label="Key" hidden>
                                 <Input />
                             </Form.Item>
@@ -398,13 +403,13 @@ function SkillsetAdmin(props) {
                                 <Input />
                             </Form.Item>
                             <Row gutter={5}>
-                                <Col span={10}>
-                                    <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+                                <Col span={8}>
+                                    <Form.Item name="name" label="Name" labelAlign="left" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>
-                                <Col span={10}>
-                                    <Form.Item name="technology" label="Technology" rules={[{ required: true }]}>
+                                <Col span={8}>
+                                    <Form.Item name="technology" label="Technology" labelAlign="left" rules={[{ required: true }]}>
                                         <Select
                                             placeholder="Set Technology"
                                             allowClear
@@ -417,8 +422,8 @@ function SkillsetAdmin(props) {
                                         </Select>
                                     </Form.Item>
                                 </Col>
-                                <Col span={4}>
-                                    <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="active">
+                                <Col span={8}>
+                                    <Form.Item name="status" label="Status" labelAlign="left" rules={[{ required: true }]} initialValue="active">
                                         <Select
                                             placeholder="Set Status"
                                             allowClear
@@ -435,6 +440,8 @@ function SkillsetAdmin(props) {
                                     <Button type="primary" htmlType="submit" className="mr-2">
                                         Submit
                                     </Button>
+                                </Form.Item>
+                                <Form.Item>
                                     {
                                         !form.getFieldValue('key') && (
                                             <Button htmlType="button" onClick={onReset}>

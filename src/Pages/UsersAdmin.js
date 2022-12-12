@@ -386,7 +386,8 @@ function UsersAdmin(props) {
     }, [])
 
     const layout = {
-        labelCol: { span: 8 },
+        labelCol: { span: 5 },
+        wrapperCol: { span: 16 },
     };
 
     const tailLayout = {
@@ -398,14 +399,14 @@ function UsersAdmin(props) {
             {contextHolder}
             <div className="flex justify-between">
                 <h1>Users</h1>
-                <Button type="primary" onClick={() => setShowAddEditForm((prev) => !prev)}>
+                <Button type="primary" onClick={() => setShowAddEditForm((prev) => { form.resetFields(); return !prev })}>
                     {`${showAddEditForm ? 'Back' : 'Add User'}`}
                 </Button>
             </div>
 
             {
                 showAddEditForm && (
-                    <div className="flex justify-start mt-5 -ml-28">
+                    <div className="flex justify-start mt-5 ">
                         <Form form={form} {...layout} name="control-hooks" className="w-full" onFinish={submitUsers}>
                             <Form.Item name="key" label="Key" hidden>
                                 <Input />
@@ -413,13 +414,13 @@ function UsersAdmin(props) {
 
                             <Row>
                                 <Col span={12}>
-                                    <Form.Item name="alias" label="Alias" rules={[{ required: true }]}>
+                                    <Form.Item name="alias" label="Alias" labelAlign="left" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>
 
                                 <Col span={12}>
-                                    <Form.Item name="email" label="Email">
+                                    <Form.Item name="email" label="Email" labelAlign="left" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>
@@ -427,13 +428,13 @@ function UsersAdmin(props) {
 
                             <Row>
                                 <Col span={12}>
-                                    <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+                                    <Form.Item name="name" label="Name" labelAlign="left" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>
 
                                 <Col span={12}>
-                                    <Form.Item name="username" label="Username" rules={[{ required: true }]}>
+                                    <Form.Item name="username" label="Username" labelAlign="left" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>
@@ -442,28 +443,38 @@ function UsersAdmin(props) {
 
                             <Row>
                                 <Col span={12}>
-                                    <Form.Item name="password" label="Password" rules={[{ required: true }]}>
+                                    <Form.Item name="isAdmin" label="Is Admin" labelAlign="left" rules={[{ required: true }]} initialValue="false">
+                                        <Select placeholder="Set Admin" allowClear>
+                                            <Option value="true">True</Option>
+                                            <Option value="false">False</Option>
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="password" label="Password" labelAlign="left" rules={[{ required: true }]}>
                                         <Input />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
-                                    <Form.Item name="status" label="Status" rules={[{ required: true }]} initialValue="active">
+                                    <Form.Item name="status" label="Status" labelAlign="left" rules={[{ required: true }]} initialValue="Active">
                                         <Select
                                             placeholder="Set Status"
                                             allowClear
                                         >
-                                            <Option value="active">Active</Option>
-                                            <Option value="inactive">Inactive</Option>
+                                            <Option value="Active">Active</Option>
+                                            <Option value="Inactive">Inactive</Option>
                                         </Select>
                                     </Form.Item>
                                 </Col>
                             </Row>
 
                             <div className="flex justify-end">
-                                <Form.Item>
+                                <Form.Item >
                                     <Button type="primary" htmlType="submit" className="mr-2">
                                         Submit
                                     </Button>
+                                </Form.Item>
+                                <Form.Item >
                                     {
                                         !form.getFieldValue('key') && (
                                             <Button htmlType="button" onClick={onReset}>
