@@ -50,6 +50,21 @@ function EmployeesAdmin(props) {
         )
     )
 
+    const { isLoading: usersLoading, data: usersData } = useQuery('users', () =>
+        fetch('http://localhost:3001/admin/get-users', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'x-access-token': localStorage.getItem('token')
+            }
+        }).then(res =>
+            res.json()
+        ), {
+        onSuccess: (data) => {
+        }
+    })
+
     const { isLoading: skillsLoading, data: skillData } = useQuery('skills', () =>
         fetch('http://localhost:3001/admin/get-skills', {
             method: 'GET',
@@ -470,7 +485,7 @@ function EmployeesAdmin(props) {
         },
         {
             title: 'Manager',
-            dataIndex: 'manager',
+            dataIndex: 'manager_name',
             key: 'manager',
             width: '20%',
             ...getColumnSearchProps('manager'),
@@ -479,7 +494,7 @@ function EmployeesAdmin(props) {
         },
         {
             title: 'Supporting Manager',
-            dataIndex: 'sporting_manager',
+            dataIndex: 'sporting_manager_name',
             key: 'sporting_manager',
             width: '20%',
             ...getColumnSearchProps('sporting_manager'),
@@ -739,13 +754,25 @@ function EmployeesAdmin(props) {
                             <Row>
                                 <Col span={12}>
                                     <Form.Item name="manager" label="Manager" labelAlign="left" rules={[{ required: true }]}>
-                                        <Input />
+                                        <Select>
+                                            {
+                                                usersData?.data?.map((user) => (
+                                                    <Option key={user.key} value={user.key}>{user.alias}</Option>
+                                                ))
+                                            }
+                                        </Select>
                                     </Form.Item>
                                 </Col>
 
                                 <Col span={12}>
                                     <Form.Item name="sporting_manager" label="Supporting Manager" labelAlign="left" rules={[{ required: true }]}>
-                                        <Input />
+                                        <Select>
+                                            {
+                                                usersData?.data?.map((user) => (
+                                                    <Option key={user.key} value={user.key}>{user.alias}</Option>
+                                                ))
+                                            }
+                                        </Select>
                                     </Form.Item>
                                 </Col>
                             </Row>

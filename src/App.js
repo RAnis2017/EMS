@@ -23,17 +23,19 @@ import {
   LogoutOutlined,
   CodeSandboxOutlined,
   SketchOutlined,
-  UsergroupAddOutlined
+  UsergroupAddOutlined,
+  FileSearchOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import TechnologiesAdmin from "./Pages/TechnologiesAdmin";
 import SkillsetAdmin from "./Pages/SkillsetAdmin";
 import EmployeesAdmin from "./Pages/EmployeesAdmin";
 import UsersAdmin from "./Pages/UsersAdmin";
+import ReviewsAdmin from "./Pages/ReviewsAdmin";
+import CalendarAdmin from "./Pages/CalendarAdmin";
 
 const { Header, Sider, Content } = Layout;
-
-const socket = io();
 
 const clientId = '874157957573-9ghj35jep265q5u0ksfjr5mm22qmbb1k.apps.googleusercontent.com'
 
@@ -109,6 +111,20 @@ const AppOutlet = () => {
                 },
                 {
                   key: '6',
+                  icon: <FileSearchOutlined />,
+                  label: 'Reviews',
+                  to: '/admin/reviews',
+                  onClick: () => navigate('/admin/reviews')
+                },
+                {
+                  key: '7',
+                  icon: <CalendarOutlined />,
+                  label: 'Calendar',
+                  to: '/admin/calendar',
+                  onClick: () => navigate('/admin/calendar')
+                },
+                {
+                  key: '8',
                   icon: <LogoutOutlined />,
                   label: 'Logout',
                   onClick: () => signOut()
@@ -163,6 +179,8 @@ function App() {
             <Route path="admin/skillsets" element={<SkillsetAdmin />} />
             <Route path="admin/developers" element={<EmployeesAdmin />} />
             <Route path="admin/users" element={<UsersAdmin />} />
+            <Route path="admin/reviews" element={<ReviewsAdmin />} />
+            <Route path="admin/calendar" element={<CalendarAdmin />} />
           </Route>
           <Route path="*" element={<Login />} />
         </Routes>

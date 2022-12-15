@@ -2,6 +2,7 @@
 const { sequelize } = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 const Sequelize = require("sequelize");
+const { Users } = require("./Users");
 
 const Employees = sequelize.define("Employees", {
     id: {
@@ -29,12 +30,20 @@ const Employees = sequelize.define("Employees", {
         allowNull: false
     },
     manager: {
-        type: DataTypes.STRING,
+        type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+            model: 'Users',
+            key: 'id'
+        }
     },
     sporting_manager: {
-        type: DataTypes.STRING,
+        type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+            model: 'Users',
+            key: 'id'
+        }
     },
     status: {
         type: DataTypes.STRING,
@@ -55,5 +64,9 @@ const Employees = sequelize.define("Employees", {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
     }
 });
+
+// create a one-to-many relationship between Employees and Users
+Employees.belongsTo(Users, { foreignKey: 'manager', as: 'manager_obj' });
+Employees.belongsTo(Users, { foreignKey: 'sporting_manager', as: 'sporting_manager_obj' });
 
 module.exports = { Employees };

@@ -7,6 +7,9 @@ const Skills = require('../models/Skills').Skills;
 const Employees = require('../models/Employees').Employees;
 const Users = require('../models/Users').Users;
 const multer = require('multer');
+const { Reviews } = require('../models/Reviews');
+const { Op } = require('sequelize');
+const { Calendar } = require('../models/Calendar');
 const storage = multer.diskStorage({
     destination: (req, file, callBack) => {
         callBack(null, 'uploads')
@@ -292,8 +295,19 @@ router.get('/get-technologies-skills', async (req, res, next) => {
 
 router.get('/get-employees', async (req, res, next) => {
 
-    await Employees.sync();
-    Employees.findAll({}).then((employees) => {
+    await Employees.sync({
+        force: false
+    });
+
+    Employees.findAll({
+        include: [{
+            model: Users,
+            as: 'manager_obj',
+        }, {
+            model: Users,
+            as: 'sporting_manager_obj',
+        }]
+    }).then((employees) => {
         if (!employees) {
             res.status(400).json({ error: 'Employees not found' });
         } else {
@@ -307,6 +321,8 @@ router.get('/get-employees', async (req, res, next) => {
                     technology: employee.technology,
                     manager: employee.manager,
                     sporting_manager: employee.sporting_manager,
+                    manager_name: employee.manager_obj.alias,
+                    sporting_manager_name: employee.sporting_manager_obj.alias,
                     status: employee.status[0].toUpperCase() + employee.status.slice(1),
                     createdBy: employee.createdBy,
                     createdDate: new Date(employee.createdAt).toLocaleDateString(),
@@ -498,6 +514,289 @@ router.delete('/delete-user/:id', async (req, res, next) => {
             res.status(400).json({ error: 'User not deleted' });
         } else {
             res.status(200).json({ message: 'User deleted successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.get('/get-reviews', async (req, res, next) => {
+
+    await Reviews.sync();
+
+    // get user id from alias
+    let user = await Users.findOne({
+        where: {
+            alias: req.user.alias
+        }
+    });
+
+    let findAllQuery = {
+        include: [{
+            model: Employees,
+            include: [{
+                model: Users,
+                as: 'manager_obj',
+            }, {
+                model: Users,
+                as: 'sporting_manager_obj',
+            }]
+        }]
+    }
+
+    if(req.user.isAdmin == false) {
+        findAllQuery.where = {
+            [Op.or]: [
+                { '$Employee.manager_obj.id$': user.id },
+                { '$Employee.sporting_manager_obj.id$': user.id }
+            ]
+        }
+    }
+
+    Reviews.findAll(findAllQuery).then((reviews) => {
+        if (!reviews) {
+            res.status(400).json({ error: 'Reviews not found' });
+        } else {
+            let data = [];
+            reviews.forEach((review) => {
+                data.push({
+                    key: review.id,
+                    developer: review.Employee.emp_alias,
+                    manager: review.Employee.manager_obj.alias,
+                    sporting_manager: review.Employee.sporting_manager_obj.alias,
+                    text: review.text,
+                    rating: review.rating,
+                    createdBy: review.createdBy,
+                    createdDate: new Date(review.createdAt).toLocaleDateString(),
+                })
+            })
+
+            res.status(200).json({ data });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.post('/add-review', async (req, res, next) => {
+
+    await Reviews.sync();
+
+    Reviews.create({
+        developer: req.body.developer,
+        text: req.body.text,
+        rating: req.body.rating,
+        createdBy: req.user.alias
+    }).then((review) => {
+        if (!review) {
+            res.status(400).json({ error: 'Review not created' });
+        } else {
+            res.status(200).json({ message: 'Review created successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.put('/update-review/:id', async (req, res, next) => {
+    
+    await Reviews.sync();
+
+    Reviews.update({
+        developer: req.body.developer,
+        text: req.body.text,
+        rating: req.body.rating,
+        updatedBy: req.user.alias
+    }, {
+        where: {
+            id: req.params.id
+        }
+    }).then((review) => {
+        if (!review) {
+            res.status(400).json({ error: 'Review not updated' });
+        } else {
+            res.status(200).json({ message: 'Review updated successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.delete('/delete-review/:id', async (req, res, next) => {
+    
+    await Reviews.sync();
+
+    Reviews.destroy({
+        where: {
+            id: req.params.id
+        }
+    }).then((review) => {
+        if (!review) {
+            res.status(400).json({ error: 'Review not deleted' });
+        } else {
+            res.status(200).json({ message: 'Review deleted successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.get('/get-calendars', async (req, res, next) => {
+
+    await Calendar.sync();
+
+    Calendar.findAll({
+        include: [{
+            model: Employees,
+            include: [{
+                model: Users,
+                as: 'manager_obj'
+            }, {
+                model: Users,
+                as: 'sporting_manager_obj'
+            }]
+        }]
+    }).then((calendars) => {
+        if (!calendars) {
+            res.status(400).json({ error: 'Calendars not found' });
+        } else {
+            let data = [];
+            calendars.forEach((calendar) => {
+                data.push({
+                    key: calendar.id,
+                    developer: calendar.Employee.id,
+                    developerName: calendar.Employee.emp_alias,
+                    manager: calendar.Employee.manager_obj.alias,
+                    sportingManager: calendar.Employee.sporting_manager_obj.alias,
+                    date: new Date(calendar.date).toLocaleDateString(),
+                    startTime: calendar.startTime,
+                    endTime: calendar.endTime,
+                    createdBy: calendar.createdBy,
+                    createdDate: new Date(calendar.createdAt).toLocaleDateString(),
+                })
+            })
+
+            res.status(200).json({ data });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.post('/add-calendar', async (req, res, next) => {
+
+    await Calendar.sync();
+
+    let startTime = new Date(req.body.startTime);
+    let endTime = startTime;
+    endTime.setMinutes(endTime.getMinutes() + 60);
+
+    // end time to string with format YYYY-MM-DDTHH:mm:ss.sssZ
+    endTime = endTime.toISOString();
+
+    let date = req.body.date.split('T')[0]; 
+    
+    // search calendars for existing event between start and end time
+    let calendars = await Calendar.findAll({
+        where: {
+            date,
+            startTime: {
+                [Op.lte]: endTime
+            },
+            endTime: {
+                [Op.gte]: req.body.startTime
+            }
+        }
+    });
+
+    if (calendars.length > 0) {
+        res.status(400).json({ error: 'Calendar event already exists' });
+        return;
+    }
+
+    Calendar.create({
+        developer: req.body.developer,
+        date: req.body.date.split('T')[0],
+        startTime: req.body.startTime,
+        endTime,
+        createdBy: req.user.alias
+    }).then((calendar) => {
+        if (!calendar) {
+            res.status(400).json({ error: 'Calendar not created' });
+        } else {
+            res.status(200).json({ message: 'Calendar created successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.put('/update-calendar/:id', async (req, res, next) => {
+    
+    let startTime = new Date(req.body.startTime);
+    let endTime = startTime;
+    endTime.setMinutes(endTime.getMinutes() + 60);
+
+    // end time to string with format YYYY-MM-DDTHH:mm:ss.sssZ
+    endTime = endTime.toISOString();
+
+    let date = req.body.date.split('T')[0]; 
+    
+    // search calendars for existing event between start and end time
+    let calendars = await Calendar.findAll({
+        where: {
+            date,
+            startTime: {
+                [Op.lte]: endTime
+            },
+            endTime: {
+                [Op.gte]: req.body.startTime
+            },
+            id: {
+                [Op.ne]: req.params.id
+            }
+        }
+    });
+
+    if (calendars.length > 0) {
+        res.status(400).json({ error: 'Calendar event already exists' });
+        return;
+    }
+
+    Calendar.update({
+        developer: req.body.developer,
+        date: req.body.date.split('T')[0],
+        startTime: req.body.startTime,
+        endTime,
+        updatedBy: req.user.alias
+    }, {
+        where: {
+            id: req.params.id
+        }
+    }).then((calendar) => {
+        if (!calendar) {
+            res.status(400).json({ error: 'Calendar not updated' });
+        } else {
+            res.status(200).json({ message: 'Calendar updated successfully' });
+        }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.delete('/delete-calendar/:id', async (req, res, next) => {
+    
+    await Calendar.sync();
+
+    Calendar.destroy({
+        where: {
+            id: req.params.id
+        }
+    }).then((calendar) => {
+        if (!calendar) {
+            res.status(400).json({ error: 'Calendar not deleted' });
+        } else {
+            res.status(200).json({ message: 'Calendar deleted successfully' });
         }
     }).catch((err) => {
         res.status(400).json({ error: err });

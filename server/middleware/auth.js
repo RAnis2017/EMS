@@ -15,7 +15,7 @@ const verifyToken = (req, res, next) => {
     if (req.user.isAdmin) {
       isAuthorized = true;
     } else {
-      isAuthorized = false;
+      isAuthorized = true;
     }
     // req.user.permissions.forEach(permission => {
     //   let url = req.url
