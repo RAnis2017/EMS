@@ -14,7 +14,6 @@ import AdminDashboard from "./Pages/AdminDashboard";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useGoogleLogout } from "react-google-login";
-import io from 'socket.io-client';
 import 'antd/dist/antd.css'; // or 'antd/dist/antd.less'
 import {
   MenuFoldOutlined,
@@ -25,7 +24,7 @@ import {
   SketchOutlined,
   UsergroupAddOutlined,
   FileSearchOutlined,
-  CalendarOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import { Layout, Menu } from 'antd';
 import TechnologiesAdmin from "./Pages/TechnologiesAdmin";
@@ -105,9 +104,9 @@ const AppOutlet = () => {
                 {
                   key: '5',
                   icon: <UserOutlined />,
-                  label: 'Users',
-                  to: '/admin/users',
-                  onClick: () => navigate('/admin/users')
+                  label: 'Managers',
+                  to: '/admin/managers',
+                  onClick: () => navigate('/admin/managers')
                 },
                 {
                   key: '6',
@@ -118,10 +117,10 @@ const AppOutlet = () => {
                 },
                 {
                   key: '7',
-                  icon: <CalendarOutlined />,
-                  label: 'Calendar',
-                  to: '/admin/calendar',
-                  onClick: () => navigate('/admin/calendar')
+                  icon: <ClockCircleOutlined />,
+                  label: 'Schedular',
+                  to: '/admin/schedular',
+                  onClick: () => navigate('/admin/schedular')
                 },
                 {
                   key: '8',
@@ -178,9 +177,9 @@ function App() {
             <Route path="admin/technologies" element={<TechnologiesAdmin />} />
             <Route path="admin/skillsets" element={<SkillsetAdmin />} />
             <Route path="admin/developers" element={<EmployeesAdmin />} />
-            <Route path="admin/users" element={<UsersAdmin />} />
+            <Route path="admin/managers" element={<UsersAdmin />} />
             <Route path="admin/reviews" element={<ReviewsAdmin />} />
-            <Route path="admin/calendar" element={<CalendarAdmin />} />
+            <Route path="admin/schedular" element={<CalendarAdmin />} />
           </Route>
           <Route path="*" element={<Login />} />
         </Routes>

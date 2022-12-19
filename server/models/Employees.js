@@ -69,4 +69,7 @@ const Employees = sequelize.define("Employees", {
 Employees.belongsTo(Users, { foreignKey: 'manager', as: 'manager_obj' });
 Employees.belongsTo(Users, { foreignKey: 'sporting_manager', as: 'sporting_manager_obj' });
 
+Users.hasMany(Employees, { foreignKey: 'manager', as: 'manager_obj' });
+Users.hasMany(Employees, { foreignKey: 'sporting_manager', as: 'sporting_manager_obj' })
+
 module.exports = { Employees };

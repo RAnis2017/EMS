@@ -8,7 +8,7 @@ const Employees = require('../models/Employees').Employees;
 const Users = require('../models/Users').Users;
 const multer = require('multer');
 const { Reviews } = require('../models/Reviews');
-const { Op } = require('sequelize');
+const { Op, Sequelize } = require('sequelize');
 const { Calendar } = require('../models/Calendar');
 const storage = multer.diskStorage({
     destination: (req, file, callBack) => {
@@ -411,7 +411,19 @@ router.delete('/delete-employee/:id', async (req, res, next) => {
 router.get('/get-users', async (req, res, next) => {
 
     await Users.sync();
-    Users.findAll({}).then((users) => {
+    Users.findAll({
+        attributes: { 
+            include: [[Sequelize.fn('COUNT', Sequelize.col('manager_obj.id')), 'manager_count'], [Sequelize.fn('COUNT', Sequelize.col('sporting_manager_obj.id')), 'sporting_manager_count']] 
+        },
+        include: [{
+            model: Employees,
+            as: 'manager_obj',
+        }, {
+            model: Employees,
+            as: 'sporting_manager_obj',
+        }],
+        group: ['Users.id']
+    }).then((users) => {
         if (!users) {
             res.status(400).json({ error: 'Users not found' });
         } else {
@@ -424,6 +436,7 @@ router.get('/get-users', async (req, res, next) => {
                     username: user.username,
                     name: user.name,
                     password: '********',
+                    developers: user.dataValues.manager_count + user.dataValues.sporting_manager_count,
                     isAdmin: user.isAdmin,
                     status: user.status[0].toUpperCase() + user.status.slice(1),
                     createdBy: user.created_by,
@@ -541,7 +554,10 @@ router.get('/get-reviews', async (req, res, next) => {
                 model: Users,
                 as: 'sporting_manager_obj',
             }]
-        }]
+        }],
+        order: [
+            ['createdDate', 'DESC']
+        ],
     }
 
     if(req.user.isAdmin == false) {
@@ -567,7 +583,7 @@ router.get('/get-reviews', async (req, res, next) => {
                     text: review.text,
                     rating: review.rating,
                     createdBy: review.createdBy,
-                    createdDate: new Date(review.createdAt).toLocaleDateString(),
+                    createdDate: new Date(review.createdDate).toLocaleDateString(),
                 })
             })
 
@@ -586,6 +602,7 @@ router.post('/add-review', async (req, res, next) => {
         developer: req.body.developer,
         text: req.body.text,
         rating: req.body.rating,
+        createdDate: req.body.createdDate,
         createdBy: req.user.alias
     }).then((review) => {
         if (!review) {
@@ -606,6 +623,7 @@ router.put('/update-review/:id', async (req, res, next) => {
         developer: req.body.developer,
         text: req.body.text,
         rating: req.body.rating,
+        createdDate: req.body.createdDate,
         updatedBy: req.user.alias
     }, {
         where: {

@@ -4,13 +4,14 @@ import { useNavigate } from "react-router-dom"
 import {
     DownOutlined
 } from '@ant-design/icons';
-import { Space, Table, Dropdown, Button, Form, Input, Select, Menu, Row, Col, Alert, notification, Popconfirm, Rate } from 'antd';
+import { Space, Table, Dropdown, Button, Form, Input, Select, Menu, Row, Col, Alert, notification, Popconfirm, Rate, DatePicker } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import Highlighter from 'react-highlight-words';
 import { useMutation, useQuery, useQueryClient } from 'react-query'
 
 import './ReviewsAdmin.css'
 import TextArea from "antd/lib/input/TextArea";
+import moment from "moment";
 
 const { Option } = Select;
 
@@ -236,10 +237,14 @@ function ReviewsAdmin(props) {
     });
 
     const editRecord = (record) => {
+        let developer = employeesData?.data?.find((employee) => employee.alias === record.developer)
+        let date = moment(record.createdDate.split('/').reverse().join('-'))
+
         form.setFieldsValue({
             key: record.key,
-            developer: record.developer,
+            developer: developer.key,
             text: record.text,
+            createdDate: date,
             rating: record.rating
         })
 
@@ -287,6 +292,15 @@ function ReviewsAdmin(props) {
 
     const columns = [
         {
+            title: 'ID',
+            dataIndex: 'key',
+            key: 'key',
+            width: '5%',
+            ...getColumnSearchProps('key'),
+            sorter: (a, b) => a.key.length - b.key.length,
+            sortDirections: ['descend', 'ascend'],
+        },
+        {
             title: 'Developer',
             dataIndex: 'developer',
             key: 'developer',
@@ -322,7 +336,7 @@ function ReviewsAdmin(props) {
             sortDirections: ['descend', 'ascend'],
         },
         {
-            title: 'Created Date',
+            title: 'Review Date',
             dataIndex: 'createdDate',
             key: 'createdDate',
             ...getColumnSearchProps('createdDate'),
@@ -355,8 +369,16 @@ function ReviewsAdmin(props) {
         }
     };
 
+const disabledDate = (current) => {
+    // Can not select days before today
+    return current > moment().endOf('day');
+  };
+
     const onReset = () => {
         form.resetFields();
+        form.setFieldsValue({
+            createdDate: moment()
+        })
         setSelectedManager('')
         setSelectedSupManager('')
     };
@@ -424,6 +446,12 @@ function ReviewsAdmin(props) {
                                 <Col span={8}>
                                     <Form.Item name="text" label="Review" labelAlign="left" rules={[{ required: true }]}>
                                         <TextArea />
+                                    </Form.Item>
+                                </Col>
+
+                                <Col span={8}>
+                                    <Form.Item name="createdDate" label="Review Date" labelAlign="left" rules={[{ required: true }]}>
+                                        <DatePicker defaultValue={moment()} disabledDate={disabledDate} />
                                     </Form.Item>
                                 </Col>
 

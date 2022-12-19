@@ -295,6 +295,15 @@ function SkillsetAdmin(props) {
 
     const columns = [
         {
+            title: 'ID',
+            dataIndex: 'key',
+            key: 'key',
+            width: '5%',
+            ...getColumnSearchProps('key'),
+            sorter: (a, b) => a.key.length - b.key.length,
+            sortDirections: ['descend', 'ascend'],
+        },
+        {
             title: 'Name',
             dataIndex: 'name',
             key: 'name',
