@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from 'react-query'
 import './CalendarAdmin.css'
 import { Badge, Calendar } from 'antd';
 import moment from "moment";
+import { timeFormater } from "../utils";
 
 const { Option } = Select;
 
@@ -29,11 +30,11 @@ function CalendarAdmin(props) {
     const openNotification = (type) => {
         let description = type === 'create' ? 'Calendar Event created successfully' : 'Calendar Event updated successfully'
         api.info({
-          message: 'Action Successful',
-          description,
-          placement: 'topRight',
+            message: 'Action Successful',
+            description,
+            placement: 'topRight',
         });
-      };
+    };
 
     const { isLoading: calendarsLoading, data: calendarData } = useQuery('calendars', () =>
         fetch('http://localhost:3001/admin/get-calendars', {
@@ -59,10 +60,10 @@ function CalendarAdmin(props) {
         }).then(res =>
             res.json()
         ), {
-            onSuccess: () => {
-               
-            }
+        onSuccess: () => {
+
         }
+    }
     )
 
     const { isLoading: addCalendarLoading, isSuccess: addCalendarSuccess, mutate: addCalendarMutate } = useMutation('add-calendar', (data) =>
@@ -79,7 +80,7 @@ function CalendarAdmin(props) {
         ), {
         onSuccess: (data, variables, context) => {
             if (data.error) {
-                if(data.error == 'Calendar event already exists') {
+                if (data.error == 'Calendar event already exists') {
                     setErrors([{
                         message: data.error
                     }])
@@ -113,7 +114,7 @@ function CalendarAdmin(props) {
         ), {
         onSuccess: (data, variables, context) => {
             if (data.error) {
-                if(data.error == 'Calendar event already exists') {
+                if (data.error == 'Calendar event already exists') {
                     setErrors([{
                         message: data.error
                     }])
@@ -250,7 +251,7 @@ function CalendarAdmin(props) {
 
         // convert date format from DD/MM/YYYY to YYYY-MM-DD
         let date = moment(record.date.split('/').reverse().join('-')).zone('+05:00')
-    
+
         let fields = {
             key: record.key,
             developer: record.developer,
@@ -270,14 +271,14 @@ function CalendarAdmin(props) {
 
     const items = (record) => {
         return [
-            {
-                key: '2',
-                label: (
-                    <a onClick={() => editRecord(record)}>
-                        Edit
-                    </a>
-                )
-            },
+            // {
+            //     key: '2',
+            //     label: (
+            //         <a onClick={() => editRecord(record)}>
+            //             Edit
+            //         </a>
+            //     )
+            // },
             {
                 key: '3',
                 label: (
@@ -313,45 +314,50 @@ function CalendarAdmin(props) {
         },
         {
             title: 'Developer',
-            dataIndex: 'developer',
-            key: 'developer',
-            width: '20%',
-            ...getColumnSearchProps('developer'),
-            sorter: (a, b) => a.developer.length - b.developer.length,
+            dataIndex: 'developerName',
+            key: 'developerName',
+            width: '12%',
+            ...getColumnSearchProps('developerName'),
+            sorter: (a, b) => a.developerName.length - b.developerName.length,
             sortDirections: ['descend', 'ascend'],
         },
         {
             title: 'Manager',
             dataIndex: 'manager',
             key: 'manager',
-            width: '20%',
-            ...getColumnSearchProps('status'),
+            width: '12%',
+            ...getColumnSearchProps('manager'),
             sorter: (a, b) => a.manager.length - b.manager.length,
             sortDirections: ['descend', 'ascend'],
         },
         {
             title: 'Supporting Manager',
-            dataIndex: 'sporting_manager',
-            key: 'sporting_manager',
-            width: '20%',
-            ...getColumnSearchProps('status'),
-            sorter: (a, b) => a.sporting_manager.length - b.sporting_manager.length,
+            dataIndex: 'sportingManager',
+            key: 'sportingManager',
+            width: '12%',
+            ...getColumnSearchProps('sportingManager'),
+            sorter: (a, b) => a.sportingManager.length - b.sportingManager.length,
             sortDirections: ['descend', 'ascend'],
         },
         {
-            title: 'Created By',
-            dataIndex: 'createdBy',
-            key: 'createdBy',
-            ...getColumnSearchProps('createdBy'),
-            sorter: (a, b) => a.createdBy.length - b.createdBy.length,
+            title: 'Meeting Date',
+            dataIndex: 'date',
+            key: 'date',
+            width: '9%',
+            ...getColumnSearchProps('date'),
+            sorter: (a, b) => a.date.length - b.date.length,
             sortDirections: ['descend', 'ascend'],
         },
         {
-            title: 'Created Date',
-            dataIndex: 'createdDate',
-            key: 'createdDate',
-            ...getColumnSearchProps('createdDate'),
-            sorter: (a, b) => a.createdDate - b.createdDate,
+            title: 'Meeting Time',
+            key: 'startTimeA',
+            width: '15%',
+            ...getColumnSearchProps('startTime'),
+            // dataIndex: 'startTime',
+            render: (_, record) => {
+                let time = timeFormater(record.startTime)
+                return time
+            },
             sortDirections: ['descend', 'ascend'],
         },
         {
@@ -373,9 +379,12 @@ function CalendarAdmin(props) {
 
     const submitCalendars = (values) => {
         if (values.key) {
-            values.date = values.date.add(5, 'hours')
+            values.date = values.date.format('YYYY-MM-DD')
+            values.endDate = values.endDate.format('YYYY-MM-DD')
             editCalendarMutate(values)
         } else {
+            values.date = values.date.format('YYYY-MM-DD')
+            values.endDate = values.endDate.format('YYYY-MM-DD')
             addCalendarMutate(values)
         }
     };
@@ -396,8 +405,8 @@ function CalendarAdmin(props) {
     }, [])
 
     const layout = {
-        labelCol: { span: 6 },
-        wrapperCol: { span: 14 },
+        labelCol: { span: 8 },
+        wrapperCol: { span: 12 },
     };
 
     const getListData = (value) => {
@@ -416,94 +425,109 @@ function CalendarAdmin(props) {
         })
 
         return listData || [];
-      };
-      
-      const getMonthData = (value) => {
-        if (value.month() === 8) {
-          return 1394;
-        }
-      };
+    };
 
-      const monthCellRender = (value) => {
+    const getMonthData = (value) => {
+        if (value.month() === 8) {
+            return 1394;
+        }
+    };
+
+    const monthCellRender = (value) => {
         const num = getMonthData(value);
         return null
-      };
-    
-      const dateCellRender = (value) => {
+    };
+
+    const dateCellRender = (value) => {
         const listData = getListData(value);
         return (
-          <ul className="events">
-            {listData?.length > 0 && <span className="bg-red-400 p-1 rounded mb-1 text-white">{listData?.length} Meetings</span>}
-            {listData.map((item) => (
-              <li key={item.key} className="hover:bg-gray-600 hover:text-white p-2 rounded-md" onClick={() => console.log(item)}>
-                {item.manager} & {item.sportingManager} Meeting with {item.developerName} @ {item.startTimeFormatted}
+            <ul className="events">
+                {listData?.length > 0 && <span className="bg-red-400 p-1 rounded mb-1 text-white">{listData?.length} Meetings</span>}
+                {listData.map((item) => (
+                    <li key={item.key} className="hover:bg-gray-600 hover:text-white p-2 rounded-md" onClick={() => console.log(item)}>
+                        {item.manager} & {item.sportingManager} Meeting with {item.developerName} @ {item.startTimeFormatted}
 
-                <Dropdown overlay={menu(items(item))}>
-                    <a onClick={e => e.preventDefault()}>
-                        <Space align="right" className="text-white bg-gray-600 p-1 rounded-lg">
-                            Actions
-                            <DownOutlined />
-                        </Space>
-                    </a>
-                </Dropdown>
-              </li>
-            ))}
-          </ul>
+                        <Dropdown overlay={menu(items(item))}>
+                            <a onClick={e => e.preventDefault()}>
+                                <Space align="right" className="text-white bg-gray-600 p-1 rounded-lg">
+                                    Actions
+                                    <DownOutlined />
+                                </Space>
+                            </a>
+                        </Dropdown>
+                    </li>
+                ))}
+            </ul>
         );
-      };
-      
+    };
+
     return (
         <div>
             {contextHolder}
             <div className="flex justify-between">
-                <h1>Calendar</h1>
+                <h1>Schedular</h1>
+                <Button type="primary" onClick={() => setShowAddEditForm((prev) => { form.resetFields(); return !prev })}>
+                    {`${showAddEditForm ? 'Back' : 'Add Meeting'}`}
+                </Button>
             </div>
 
-            <div className="flex justify-center mt-7">
-                <Form form={form} {...layout}  name="control-hooks" className="w-full" onFinish={submitCalendars}>
-                    <Form.Item name="key" label="Key" hidden>
-                        <Input />
-                    </Form.Item>
-                    <Row gutter={4}>
-                        <Col span={10}>
-                            <Form.Item name="developer" label="Developer" labelAlign="left" rules={[{ required: true }]}>
-                                <Select>
-                                    {employeesData?.data?.map((developer) => (
-                                        <Option key={developer.key} value={developer.key}>{developer.alias}</Option>
-                                    ))}
-                                </Select>
+            {
+                showAddEditForm && (
+                    <div className="flex justify-center mt-7">
+                        <Form form={form} {...layout} name="control-hooks" className="w-full" onFinish={submitCalendars}>
+                            <Form.Item name="key" label="Key" hidden>
+                                <Input />
                             </Form.Item>
-                        </Col>
-                        <Col span={6}>
-                            <Form.Item name="date" label="Date" labelAlign="left" rules={[{ required: true }]}>
-                                <DatePicker disabledTime={true} />
-                            </Form.Item>
-                        </Col>
-                        <Col span={6}>
-                            <Form.Item name="startTime" label="Time" labelAlign="left" rules={[{ required: true }]}>
-                                <TimePicker use12Hours format="h:mm A" />
-                            </Form.Item>
-                        </Col>
-                    </Row>
+                            <Row gutter={2}>
+                                <Col span={12}>
+                                    <Form.Item name="developer" label="Developer" labelAlign="left" rules={[{ required: true }]}>
+                                        <Select>
+                                            {employeesData?.data?.map((developer) => (
+                                                <Option key={developer.key} value={developer.key}>{developer.alias}</Option>
+                                            ))}
+                                        </Select>
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="date" label="Date" labelAlign="left" rules={[{ required: true }]}>
+                                        <DatePicker disabledTime={true} />
+                                    </Form.Item>
+                                </Col>
+                                
+                            </Row>
+                            <Row gutter={2}>
+                                <Col span={12}>
+                                    <Form.Item name="endDate" label="End Date" labelAlign="left" rules={[{ required: true }]}>
+                                        <DatePicker disabledTime={true} />
+                                    </Form.Item>
+                                </Col>
+                                <Col span={12}>
+                                    <Form.Item name="startTime" label="Time" labelAlign="left" rules={[{ required: true }]}>
+                                        <TimePicker use12Hours format="h:mm A" />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
 
-                    <div className="flex justify-center">
-                        <Form.Item>
-                            <Button type="primary" htmlType="submit" className="mr-2">
-                                Submit
-                            </Button>
-                        </Form.Item>
-                        <Form.Item>
-                            {
-                                !form.getFieldValue('key') && (
-                                    <Button htmlType="button" onClick={onReset}>
-                                        Reset
+                            <div className="flex justify-center">
+                                <Form.Item>
+                                    <Button type="primary" htmlType="submit" className="mr-2">
+                                        Submit
                                     </Button>
-                                )
-                            }
-                        </Form.Item>
+                                </Form.Item>
+                                <Form.Item>
+                                    {
+                                        !form.getFieldValue('key') && (
+                                            <Button htmlType="button" onClick={onReset}>
+                                                Reset
+                                            </Button>
+                                        )
+                                    }
+                                </Form.Item>
+                            </div>
+                        </Form>
                     </div>
-                </Form>
-            </div>
+                )
+            }
 
             {
                 errors && (
@@ -518,8 +542,11 @@ function CalendarAdmin(props) {
             }
 
             {
-                <Calendar dateCellRender={dateCellRender} monthCellRender={monthCellRender} />
+                !showAddEditForm && (
+                    <Table columns={columns} dataSource={calendarData?.data} scroll={{ y: 600, x: '100vw' }} className="mt-5" />
+                )
             }
+
         </div>
     )
 }

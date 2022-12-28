@@ -2,3 +2,11 @@
     padding: 30px;
     background: #ececec;
 }
+
+.ant-picker-content, .ant-picker-calendar-date-value {
+    text-align: left;
+}
+
+.ant-picker-content > thead > tr > th {
+    padding-left: 10px !important;
+}

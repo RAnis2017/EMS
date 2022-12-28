@@ -2,37 +2,24 @@
 const { sequelize } = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 const Sequelize = require("sequelize");
-const { Employees } = require("./Employees");
+const { Calendar } = require("./Calendar");
 
-const Calendar = sequelize.define("Calendar", {
+const Notifications = sequelize.define("Notifications", {
     id: {
         type: DataTypes.INTEGER,
         autoIncrement: true,
-        primaryKey: true,
-        allowNull: false,
+        primaryKey: true
     },
-    developer: {
+    calendarId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model: 'Employees',
+            model: 'Calendar',
             key: 'id'
         }
     },
-    date: {
+    status: {
         type: DataTypes.STRING,
-        allowNull: false,
-    },
-    endDate: {
-        type: DataTypes.STRING,
-        allowNull: false,
-    },
-    startTime: {
-        type: DataTypes.TIME,
-        allowNull: false,
-    },
-    endTime: {
-        type: DataTypes.TIME,
         allowNull: false,
     },
     createdBy: {
@@ -51,6 +38,7 @@ const Calendar = sequelize.define("Calendar", {
     }
 });
 
-Calendar.belongsTo(Employees, { foreignKey: 'developer' });
+Calendar.hasMany(Notifications, { foreignKey: 'calendarId' });
+Notifications.belongsTo(Calendar, { foreignKey: 'calendarId' });
 
-module.exports = { Calendar };
+module.exports = { Notifications };

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import { connect } from "react-redux"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import {
     DownOutlined
 } from '@ant-design/icons';
@@ -26,6 +26,7 @@ function ReviewsAdmin(props) {
     const [api, contextHolder] = notification.useNotification();
     const [selectedManager, setSelectedManager] = useState(null)
     const [selectedSupManager, setSelectedSupManager] = useState(null)
+    const params = useParams()
 
     const openNotification = (type) => {
         let description = type === 'create' ? 'Review created successfully' : 'Review updated successfully'
@@ -89,6 +90,7 @@ function ReviewsAdmin(props) {
                 openNotification('create')
                 setShowAddEditForm(false)
                 form.resetFields()
+                navigate('/admin/reviews')
                 queryClient.invalidateQueries('reviews')
             }
         }
@@ -118,6 +120,7 @@ function ReviewsAdmin(props) {
                 openNotification('update')
                 setShowAddEditForm(false)
                 form.resetFields()
+                navigate('/admin/reviews')
                 queryClient.invalidateQueries('reviews')
             }
         }
@@ -391,11 +394,40 @@ const disabledDate = (current) => {
                 navigate("/login")
             }
         }
+
     }, [])
+
+    useEffect(() => {
+
+        if(params) {
+
+            if(params.developer) {
+                setShowAddEditForm(true)
+                let developer = employeesData?.data?.find((dev) => dev.alias === params.developer)
+
+                if(developer) {
+                    form.setFieldsValue({
+                        developer: developer.key
+                    })
+    
+                    setSelectedManager(developer.manager_name)
+                    setSelectedSupManager(developer.sporting_manager_name)
+                }
+
+            }
+
+            if(params.date) {
+                form.setFieldsValue({
+                    createdDate: moment(params.date.split('-').reverse().join('-'))
+                })
+            }
+        }
+
+    }, [employeesData, params])
 
     const layout = {
         labelCol: { span: 7 },
-        wrapperCol: { span: 15 },
+        wrapperCol: { span: 12 },
     };
 
     return (
@@ -433,22 +465,16 @@ const disabledDate = (current) => {
                                 </Col>
                                 <Col span={8}>
                                     <Form.Item label="Manager" labelAlign="left" rules={[{ required: true }]}>
-                                        <Input value={selectedManager} contentEditable={false}/>
+                                        <Input value={selectedManager} disabled="true"/>
                                     </Form.Item>
                                 </Col>
                                 <Col span={8}>
                                     <Form.Item label="Sup. Manager" labelAlign="left" rules={[{ required: true }]}>
-                                        <Input value={selectedSupManager} contentEditable={false}/>
+                                        <Input value={selectedSupManager} disabled="true"/>
                                     </Form.Item>
                                 </Col>
                             </Row>
                             <Row gutter={4}>
-                                <Col span={8}>
-                                    <Form.Item name="text" label="Review" labelAlign="left" rules={[{ required: true }]}>
-                                        <TextArea />
-                                    </Form.Item>
-                                </Col>
-
                                 <Col span={8}>
                                     <Form.Item name="createdDate" label="Review Date" labelAlign="left" rules={[{ required: true }]}>
                                         <DatePicker defaultValue={moment()} disabledDate={disabledDate} />
@@ -458,6 +484,13 @@ const disabledDate = (current) => {
                                 <Col span={8}>
                                     <Form.Item name="rating" label="Ratings"  labelAlign="left" rules={[{ required: true }]}>
                                         <Rate allowHalf defaultValue={2.5} />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+                            <Row gutter={4}>
+                                <Col span={18}>
+                                    <Form.Item name="text" labelCol={2} wrapperCol={8}  label="Review" labelAlign="left" rules={[{ required: true }]}>
+                                        <TextArea className="!ml-11" />
                                     </Form.Item>
                                 </Col>
                             </Row>

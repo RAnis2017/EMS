@@ -10,6 +10,7 @@ const multer = require('multer');
 const { Reviews } = require('../models/Reviews');
 const { Op, Sequelize } = require('sequelize');
 const { Calendar } = require('../models/Calendar');
+const { Notifications } = require('../models/Notifications');
 const storage = multer.diskStorage({
     destination: (req, file, callBack) => {
         callBack(null, 'uploads')
@@ -18,6 +19,8 @@ const storage = multer.diskStorage({
         callBack(null, `${file.originalname}`)
     }
 })
+const moment = require('moment');
+const { sequelize } = require('../config/sequelize');
 // const nodemailer = require('nodemailer');
 
 // let transporter = nodemailer.createTransport({
@@ -662,8 +665,11 @@ router.delete('/delete-review/:id', async (req, res, next) => {
 router.get('/get-calendars', async (req, res, next) => {
 
     await Calendar.sync();
+    await Notifications.sync();
 
-    Calendar.findAll({
+    let queryParam = req.query.current;
+
+    let query = {
         include: [{
             model: Employees,
             include: [{
@@ -673,8 +679,30 @@ router.get('/get-calendars', async (req, res, next) => {
                 model: Users,
                 as: 'sporting_manager_obj'
             }]
+        }, {
+            model: Notifications,
         }]
-    }).then((calendars) => {
+    }
+
+    let date = new Date();
+    // formate date to yyyy-mm-dd
+    let formattedDate = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+    
+    if(queryParam == '1') {
+        query.where = {
+            date: formattedDate,
+            [Op.or]: [
+                { '$Employee.manager_obj.alias$': req.user.alias },
+                { '$Employee.sporting_manager_obj.alias$': req.user.alias }
+            ]
+        }
+
+        query.order = [
+            ['startTime', 'ASC']
+        ]
+    }
+
+    Calendar.findAll(query).then((calendars) => {
         if (!calendars) {
             res.status(400).json({ error: 'Calendars not found' });
         } else {
@@ -686,7 +714,8 @@ router.get('/get-calendars', async (req, res, next) => {
                     developerName: calendar.Employee.emp_alias,
                     manager: calendar.Employee.manager_obj.alias,
                     sportingManager: calendar.Employee.sporting_manager_obj.alias,
-                    date: new Date(calendar.date).toLocaleDateString(),
+                    date: moment(calendar.date).format('DD/MM/YYYY'),
+                    endDate: moment(calendar.date).format('DD/MM/YYYY'),
                     startTime: calendar.startTime,
                     endTime: calendar.endTime,
                     createdBy: calendar.createdBy,
@@ -712,12 +741,13 @@ router.post('/add-calendar', async (req, res, next) => {
     // end time to string with format YYYY-MM-DDTHH:mm:ss.sssZ
     endTime = endTime.toISOString();
 
-    let date = req.body.date.split('T')[0]; 
+    let date = moment(req.body.date).subtract(5, 'hours');
+    let endDate = moment(req.body.endDate).subtract(5, 'hours');
     
     // search calendars for existing event between start and end time
+
     let calendars = await Calendar.findAll({
         where: {
-            date,
             startTime: {
                 [Op.lte]: endTime
             },
@@ -727,26 +757,60 @@ router.post('/add-calendar', async (req, res, next) => {
         }
     });
 
+    // filter calendars if date is between start and end date
+    calendars = calendars.filter((calendar) => {
+        let calendarDate = moment(calendar.date);
+        if(calendarDate >= date && calendarDate <= endDate) {
+            return calendar;
+        }
+    })
+
     if (calendars.length > 0) {
         res.status(400).json({ error: 'Calendar event already exists' });
         return;
     }
 
-    Calendar.create({
-        developer: req.body.developer,
-        date: req.body.date.split('T')[0],
-        startTime: req.body.startTime,
-        endTime,
-        createdBy: req.user.alias
-    }).then((calendar) => {
-        if (!calendar) {
-            res.status(400).json({ error: 'Calendar not created' });
-        } else {
-            res.status(200).json({ message: 'Calendar created successfully' });
-        }
-    }).catch((err) => {
-        res.status(400).json({ error: err });
+    // create bulk calendars for each 7 days between start and end date
+
+    let bulkCalendars = [];
+    let currentDate = date;
+    while(currentDate <= endDate) {
+        bulkCalendars.push({
+            developer: req.body.developer,
+            date: currentDate.format('YYYY-MM-DD'),
+            endDate: endDate._i,
+            startTime: req.body.startTime,
+            endTime,
+            createdBy: req.user.alias
+        })
+        currentDate = currentDate.add(7, 'days');
+    }
+
+    // raw query to insert bulk calendars sql
+
+    let query = '';
+    if (bulkCalendars.length > 0) {
+        query = `INSERT INTO calendars (developer, date, endDate, startTime, endTime, createdBy, createdAt, updatedAt) VALUES `;
+    }
+    bulkCalendars.forEach((calendar) => {
+        query += `(${calendar.developer}, '${calendar.date}', '${calendar.endDate}', '${calendar.startTime}', '${calendar.endTime}', '${calendar.createdBy}', '${new Date().toISOString()}', '${new Date().toISOString()}'),`;
     })
+    query = query.slice(0, -1);
+
+    // insert bulk calendars
+    if(query.trim() !== '') {
+        await sequelize.query(query).then((result) => {
+            if (result[1] == 0) {
+                res.status(400).json({ error: 'Calendar not created' });
+            } else {
+                res.status(200).json({ message: 'Calendar created successfully' });
+            }
+        }).catch((err) => {
+            res.status(400).json({ error: err });
+        })
+    } else {
+        res.status(200).json({ message: 'Calendar created successfully' });
+    }
 })
 
 router.put('/update-calendar/:id', async (req, res, next) => {
@@ -816,6 +880,134 @@ router.delete('/delete-calendar/:id', async (req, res, next) => {
         } else {
             res.status(200).json({ message: 'Calendar deleted successfully' });
         }
+    }).catch((err) => {
+        res.status(400).json({ error: err });
+    })
+})
+
+router.get('/get-stats', async (req, res, next) => {
+
+    await Employees.sync();
+    await Reviews.sync();
+    await Calendar.sync();
+    await Users.sync();
+    await Notifications.sync();
+
+    let date = new Date();
+    let formattedDate = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+
+    // count of all developers
+    let developers = await Employees.count();
+
+    // count of all reviews
+    // get user id from alias
+    let user = await Users.findOne({
+        where: {
+            alias: req.user.alias
+        }
+    });
+    
+    // moment get start of today and now get range of a day 24 hours only
+    let TODAY_START = moment().startOf('day').subtract('hours', 5).toDate();
+    let NOW = moment().endOf('day').subtract('hours', 5).toDate();
+
+    let findAllQuery = {
+        include: [{
+            model: Employees,
+            include: [{
+                model: Users,
+                as: 'manager_obj',
+            }, {
+                model: Users,
+                as: 'sporting_manager_obj',
+            }]
+        }],
+        where: {
+            createdDate: {
+                [Op.gt]: TODAY_START,
+                [Op.lt]: NOW
+            },
+            [Op.or]: [
+                { '$Employee.manager_obj.id$': user.id },
+                { '$Employee.sporting_manager_obj.id$': user.id }
+            ]
+        },
+        order: [
+            ['createdDate', 'DESC']
+        ],
+    }
+
+    let reviews = await Reviews.count(findAllQuery);
+
+    // count of all meetings only today's meetings 
+    let meetings = await Calendar.count({
+        include: [{
+            model: Employees,
+            include: [{
+                model: Users,
+                as: 'manager_obj'
+            }, {
+                model: Users,
+                as: 'sporting_manager_obj'
+            }]
+        }],
+        where: {
+            date: formattedDate,
+            [Op.or]: [
+                { '$Employee.manager_obj.alias$': req.user.alias },
+                { '$Employee.sporting_manager_obj.alias$': req.user.alias }
+            ]
+        },
+        order: [
+            ['startTime', 'ASC']
+        ]
+    });
+
+    // count of all users
+    let users = await Users.count();
+
+    res.status(200).json({ developers, reviews, meetings, users });
+})
+
+router.post('/set-notifications', async (req, res, next) => {
+
+    Notifications.sync();
+
+    let calendarIds = req.body.calendarIds;
+
+    // add bulk notifications for all calendar ids
+
+    let notifications = [];
+
+    for (let i = 0; i < calendarIds.length; i++) {
+        notifications.push({
+            calendarId: calendarIds[i],
+            status: 'read',
+            createdBy: req.user.alias
+        });
+    }
+
+    // read all notifications for current user
+    let userNotifications = await Notifications.findAll({
+        where: {
+            createdBy: req.user.alias
+        }
+    });
+    
+
+    // create bulk notifications using raw query
+
+    let query = 'INSERT INTO Notifications (calendarId, status, createdBy, createdDate, updatedDate) VALUES ';
+
+    for (let i = 0; i < notifications.length; i++) {
+        query += '(' + notifications[i].calendarId + ', "' + notifications[i].status + '", "' + notifications[i].createdBy + '", NOW(), NOW())';
+        if (i != notifications.length - 1) {
+            query += ',';
+        }
+    }
+
+    sequelize.query(query, { type: sequelize.QueryTypes.INSERT }).then((notifications) => {
+        res.status(200).json({ message: 'Notifications set successfully' });
     }).catch((err) => {
         res.status(400).json({ error: err });
     })

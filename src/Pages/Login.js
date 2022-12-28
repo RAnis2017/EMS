@@ -43,7 +43,7 @@ function Login(props) {
         setTokenAction(data.token)
         localStorage.setItem('email', data.email);
         localStorage.setItem('admin', data.isAdmin);
-        localStorage.setItem('username', data?.name);
+        localStorage.setItem('username', data?.alias);
         if(data.isAdmin) {
           navigate("/admin/dashboard");
         }
@@ -69,7 +69,7 @@ function Login(props) {
       setTokenAction(data.token)
       localStorage.setItem('email', data.email);
       localStorage.setItem('admin', data.isAdmin);
-      localStorage.setItem('username', data?.name);
+      localStorage.setItem('username', data?.alias);
       if(data.isAdmin) {
         navigate("/admin/dashboard");
       }

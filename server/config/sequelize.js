@@ -7,6 +7,7 @@ const sequelize = new Sequelize(
     {
         host: "0.0.0.0",
         dialect: "sqlite",
+        logging: console.log,
         pool: {
             max: 5,
             min: 0,

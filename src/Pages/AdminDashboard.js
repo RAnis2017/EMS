@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react"
 import { connect } from "react-redux"
 import { useNavigate } from "react-router-dom"
-import { 
-  ArrowDownOutlined, 
-  ArrowUpOutlined, 
-  UserOutlined, 
-  AlertOutlined, 
+import {
+  ArrowUpOutlined,
+  UserOutlined,
+  AlertOutlined,
   NotificationOutlined,
   LaptopOutlined,
-  ExclamationCircleOutlined
- } from '@ant-design/icons';
-import { Card, Col, Row, Statistic, Space, Table, Tag } from 'antd';
+  ExclamationCircleOutlined,
+  DownOutlined
+} from '@ant-design/icons';
+import { Card, Col, Row, Statistic, Space, Menu, Dropdown, Tag, Calendar } from 'antd';
 import './AdminDashboard.css'
+import { useQuery } from "react-query";
 
 function AdminDashboard(props) {
   const navigate = useNavigate()
@@ -23,6 +24,49 @@ function AdminDashboard(props) {
       }
     }
   }, [])
+
+  const { isLoading: statsLoading, data: statsData } = useQuery('stats', () =>
+    fetch('http://localhost:3001/admin/get-stats', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'x-access-token': localStorage.getItem('token')
+      }
+    }).then(res =>
+      res.json()
+    )
+  )
+
+  const { isLoading: calendarsLoading, data: calendarData } = useQuery('calendars', () =>
+    fetch('http://localhost:3001/admin/get-calendars', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'x-access-token': localStorage.getItem('token')
+      }
+    }).then(res =>
+      res.json()
+    )
+  )
+
+  const { isLoading: employeesLoading, data: employeesData } = useQuery('employees', () =>
+    fetch('http://localhost:3001/admin/get-employees', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'x-access-token': localStorage.getItem('token')
+      }
+    }).then(res =>
+      res.json()
+    ), {
+    onSuccess: () => {
+
+    }
+  }
+  )
 
   const columns = [
     {
@@ -105,14 +149,102 @@ function AdminDashboard(props) {
     },
   ];
 
+
+
+  const getListData = (value) => {
+    let listData = [];
+
+    calendarData?.data?.forEach((item) => {
+      if (item.date === value.format('DD/MM/YYYY')) {
+        // startTime get time only
+        let startTime = item.startTime;
+        startTime = new Date(startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+        listData.push({
+          ...item,
+          startTimeFormatted: startTime
+        })
+      }
+    })
+
+    return listData || [];
+  };
+
+  const getMonthData = (value) => {
+    if (value.month() === 8) {
+      return 1394;
+    }
+  };
+
+  const monthCellRender = (value) => {
+    const num = getMonthData(value);
+    return null
+  };
+
+  const createReview = (record) => {
+    navigate(`/admin/reviews/${record.developerName}/${record.date.replace(/\//g, '-')}`)
+  }
+
+  const reschedule = (record) => {
+    console.log(record)
+  }
+
+  const items = (record) => {
+    return [
+        {
+            key: '2',
+            label: (
+                <a onClick={() => createReview(record)}>
+                    Create Review
+                </a>
+            )
+        },
+        {
+            key: '3',
+            label: (
+              <a onClick={() => reschedule(record)}>
+                Reschedule
+              </a>
+            )
+        }
+    ]
+  };
+
+  const menu = (items) => (
+    <Menu items={items} />
+  );
+
+  const dateCellRender = (value) => {
+    const listData = getListData(value);
+    return (
+      <ul className="events">
+        {listData?.length > 0 && <span className="bg-red-400 p-1 rounded mb-1 text-white">{listData?.length} Meetings</span>}
+        {listData.map((item) => (
+          <li key={item.key} className="hover:bg-gray-600 hover:text-white p-2 rounded-md" onClick={() => console.log(item)}>
+            {item.manager} & {item.sportingManager} Meeting with {item.developerName} @ {item.startTimeFormatted}
+
+            <Dropdown overlay={menu(items(item))} className="ml-5">
+              <a onClick={e => e.preventDefault()}>
+                  <Space>
+                      Actions
+                      <DownOutlined />
+                  </Space>
+              </a>
+            </Dropdown>
+
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <div className="site-statistic-demo-card">
       <Row gutter={16}>
         <Col span={6}>
           <Card>
             <Statistic
-              title="Active Users"
-              value={428}
+              title="Users"
+              value={statsData?.users}
               valueStyle={{ color: '#3f8600' }}
               prefix={<ArrowUpOutlined />}
               suffix={<UserOutlined />}
@@ -122,10 +254,10 @@ function AdminDashboard(props) {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Inactive Users"
-              value={1224}
+              title="Developers"
+              value={statsData?.developers}
               valueStyle={{ color: '#cf1322' }}
-              prefix={<ArrowDownOutlined />}
+              prefix={<ArrowUpOutlined />}
               suffix={<UserOutlined />}
             />
           </Card>
@@ -133,8 +265,8 @@ function AdminDashboard(props) {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Pending Actions"
-              value={21}
+              title="Today's Meetings"
+              value={statsData?.meetings}
               valueStyle={{ color: '#f16012' }}
               prefix={<AlertOutlined />}
               suffix={<NotificationOutlined />}
@@ -144,8 +276,8 @@ function AdminDashboard(props) {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Equipment Requests"
-              value={11}
+              title="Today's Reviews"
+              value={statsData?.reviews}
               valueStyle={{ color: '#216012' }}
               prefix={<ExclamationCircleOutlined />}
               suffix={<LaptopOutlined />}
@@ -155,7 +287,7 @@ function AdminDashboard(props) {
       </Row>
       <Row gutter={16} style={{ marginTop: 12 }}>
         <Col span={24}>
-          <Table columns={columns} dataSource={data} />
+          <Calendar dateCellRender={dateCellRender} monthCellRender={monthCellRender} />
         </Col>
       </Row>
     </div>

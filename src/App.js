@@ -25,14 +25,20 @@ import {
   UsergroupAddOutlined,
   FileSearchOutlined,
   ClockCircleOutlined,
+  BellFilled
 } from '@ant-design/icons';
-import { Layout, Menu } from 'antd';
+import { Layout, Menu, Dropdown, Space } from 'antd';
 import TechnologiesAdmin from "./Pages/TechnologiesAdmin";
 import SkillsetAdmin from "./Pages/SkillsetAdmin";
 import EmployeesAdmin from "./Pages/EmployeesAdmin";
 import UsersAdmin from "./Pages/UsersAdmin";
 import ReviewsAdmin from "./Pages/ReviewsAdmin";
 import CalendarAdmin from "./Pages/CalendarAdmin";
+import { useMutation, useQuery } from "react-query";
+
+const onClick = ({ key }) => {
+  console.log(`click ${key}`);
+};
 
 const { Header, Sider, Content } = Layout;
 
@@ -41,6 +47,70 @@ const clientId = '874157957573-9ghj35jep265q5u0ksfjr5mm22qmbb1k.apps.googleuserc
 const AppOutlet = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate()
+  const { isLoading: calendarsLoading, data: calendarData } = useQuery('calendars-1', () =>
+    fetch('http://localhost:3001/admin/get-calendars?current=1', {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'x-access-token': localStorage.getItem('token')
+      }
+    }).then(res =>
+      res.json()
+    ),
+    {
+      onSuccess: (data) => {
+        let items = []
+
+        if(data?.data?.length > 0) {
+          items = data.data.map((calendar, index) => {
+            let startTime = new Date(calendar.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+
+            return {
+              key: calendar.key,
+              label: (
+                <p>You have an upcoming meeting with <span className="text-blue-600">{calendar.developerName}</span> @  <span className="text-yellow-600">{startTime}</span></p>
+              )
+            }
+          })
+        } else {
+          items = [
+            {
+              key: 'no-calendar',
+              label: (
+                <p>You have no upcoming meetings</p>
+              )
+            }
+          ]
+        }
+
+        setItems(items)
+      }
+    }
+  )
+
+  // post request to server to set notification as read react query
+  const { mutate: setNotificationAsRead } = useMutation('set-notification-as-read', (calendarIds) =>
+    fetch('http://localhost:3001/admin/set-notifications', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'x-access-token': localStorage.getItem('token')
+      },
+      body: JSON.stringify({
+        calendarIds
+      })
+    }).then(res =>
+      res.json()
+    ),
+    {
+      onSuccess: (data) => {
+        console.log(data)
+      }
+    }
+  )
+
   const location = useLocation()
   const onLogoutSuccess = () => {
     localStorage.removeItem('token')
@@ -59,6 +129,17 @@ const AppOutlet = () => {
     onLogoutSuccess,
     onFailure,
   })
+
+  const [items, setItems] = useState([])
+
+  const menu = (items) => {
+    return <Menu items={items} />
+  };
+
+  const setNotifications = () => {
+    let calendarIds = items.map(item => item.key)
+    setNotificationAsRead(calendarIds)
+  }
 
   return (
     <>
@@ -140,10 +221,20 @@ const AppOutlet = () => {
 
               {/* User avatar and name */}
               <span className="float-right mr-10">
-                <img src="https://via.placeholder.com/400x400"
-                  alt="alt placeholder" className="w-10 h-10 mb-2 rounded-full inline-block" />
-                {/* <span className="mr-5">{localStorage.getItem('username')}</span> */}
-                <span className="ml-2">{localStorage.getItem('email')}</span>
+                <Dropdown overlay={menu(items)}>
+                    <a onClick={e => setNotifications()} className="mr-4 text-lg bg-slate-100 rounded-md p-2 pb-3 mb-2">
+                        <Space>
+                          <BellFilled className={`${items.length > 0 && items[0].key !== 'no-calendar' ? 'animate-bounce' : ''}`} /> 
+                          <span className="text-sm bg-green-400 font-bold text-white rounded-sm p-1">{items.length && items[0].key !== 'no-calendar' ? items.length : 0}</span>
+                        </Space>
+                    </a>
+                </Dropdown>
+                <span className="">
+                  <img src="https://via.placeholder.com/400x400"
+                    alt="alt placeholder" className="w-10 h-10 mb-2 rounded-full inline-block" />
+                  {/* <span className="mr-5">{localStorage.getItem('username')}</span> */}
+                  <span className="ml-2">{localStorage.getItem('username')}</span>
+                </span>
               </span>
             </Header>
             <Content
@@ -179,6 +270,7 @@ function App() {
             <Route path="admin/developers" element={<EmployeesAdmin />} />
             <Route path="admin/managers" element={<UsersAdmin />} />
             <Route path="admin/reviews" element={<ReviewsAdmin />} />
+            <Route path="admin/reviews/:developer/:date" element={<ReviewsAdmin />} />
             <Route path="admin/schedular" element={<CalendarAdmin />} />
           </Route>
           <Route path="*" element={<Login />} />

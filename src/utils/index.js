@@ -47,3 +47,12 @@ export const fetchFunc = (url, method, headers, data, navigate, action = null) =
         return res.json()
     }
     )
+
+export const dateFormater = (date) => {
+    const dateObj = new Date(date)
+    return `${dateObj.getDate()}/${dateObj.getMonth() + 1}/${dateObj.getFullYear()}`
+}
+
+export const timeFormater = (date) => {
+    return new Date(date).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true })
+}
