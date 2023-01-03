@@ -68,6 +68,7 @@ const AppOutlet = () => {
 
             return {
               key: calendar.key,
+              seen: calendar.seen,
               label: (
                 <p>You have an upcoming meeting with <span className="text-blue-600">{calendar.developerName}</span> @  <span className="text-yellow-600">{startTime}</span></p>
               )
@@ -141,6 +142,69 @@ const AppOutlet = () => {
     setNotificationAsRead(calendarIds)
   }
 
+  const MENU_ITEMS = [
+    {
+      key: '1',
+      icon: <UserOutlined />,
+      label: 'Dashboard',
+      to: '/admin/dashboard',
+      onClick: () => navigate('/admin/dashboard')
+    },
+    {
+      key: '2',
+      icon: <CodeSandboxOutlined />,
+      label: 'Technologies',
+      to: '/admin/technologies',
+      onClick: () => navigate('/admin/technologies')
+    },
+    {
+      key: '3',
+      icon: <SketchOutlined />,
+      label: 'Skillsets',
+      to: '/admin/skillsets',
+      onClick: () => navigate('/admin/skillsets')
+    },
+    {
+      key: '4',
+      icon: <UsergroupAddOutlined />,
+      label: 'Developers',
+      to: '/admin/developers',
+      onClick: () => navigate('/admin/developers')
+    },
+    {
+      key: '5',
+      icon: <UserOutlined />,
+      label: 'Managers',
+      to: '/admin/managers',
+      onClick: () => navigate('/admin/managers')
+    },
+    {
+      key: '6',
+      icon: <FileSearchOutlined />,
+      label: 'Reviews',
+      to: '/admin/reviews',
+      onClick: () => navigate('/admin/reviews')
+    },
+    {
+      key: '7',
+      icon: <ClockCircleOutlined />,
+      label: 'Schedular',
+      to: '/admin/schedular',
+      onClick: () => navigate('/admin/schedular')
+    },
+    {
+      key: '8',
+      icon: <LogoutOutlined />,
+      label: 'Logout',
+      onClick: () => signOut()
+    }
+  ]
+
+  const getCurrentItem = () => {
+    let key = MENU_ITEMS.filter(item => item.to === location.pathname)[0]?.key
+    return key ? [key] : []
+  }
+
   return (
     <>
       <div>
@@ -152,64 +216,8 @@ const AppOutlet = () => {
             <Menu
               theme="light"
               mode="inline"
-              defaultSelectedKeys={['1']}
-              items={[
-                {
-                  key: '1',
-                  icon: <UserOutlined />,
-                  label: 'Dashboard',
-                  to: '/admin/dashboard',
-                  onClick: () => navigate('/admin/dashboard')
-                },
-                {
-                  key: '2',
-                  icon: <CodeSandboxOutlined />,
-                  label: 'Technologies',
-                  to: '/admin/technologies',
-                  onClick: () => navigate('/admin/technologies')
-                },
-                {
-                  key: '3',
-                  icon: <SketchOutlined />,
-                  label: 'Skillsets',
-                  to: '/admin/skillsets',
-                  onClick: () => navigate('/admin/skillsets')
-                },
-                {
-                  key: '4',
-                  icon: <UsergroupAddOutlined />,
-                  label: 'Developers',
-                  to: '/admin/developers',
-                  onClick: () => navigate('/admin/developers')
-                },
-                {
-                  key: '5',
-                  icon: <UserOutlined />,
-                  label: 'Managers',
-                  to: '/admin/managers',
-                  onClick: () => navigate('/admin/managers')
-                },
-                {
-                  key: '6',
-                  icon: <FileSearchOutlined />,
-                  label: 'Reviews',
-                  to: '/admin/reviews',
-                  onClick: () => navigate('/admin/reviews')
-                },
-                {
-                  key: '7',
-                  icon: <ClockCircleOutlined />,
-                  label: 'Schedular',
-                  to: '/admin/schedular',
-                  onClick: () => navigate('/admin/schedular')
-                },
-                {
-                  key: '8',
-                  icon: <LogoutOutlined />,
-                  label: 'Logout',
-                  onClick: () => signOut()
-                }
-              ]}
+              defaultSelectedKeys={() => getCurrentItem()}
+              items={MENU_ITEMS}
             />
           </Sider>
           <Layout className="site-layout">
@@ -222,12 +230,21 @@ const AppOutlet = () => {
               {/* User avatar and name */}
               <span className="float-right mr-10">
                 <Dropdown overlay={menu(items)}>
+                  {
+                    items.length > 0 && items.filter(item => item.seen === false).length > 0 ?
                     <a onClick={e => setNotifications()} className="mr-4 text-lg bg-slate-100 rounded-md p-2 pb-3 mb-2">
                         <Space>
                           <BellFilled className={`${items.length > 0 && items[0].key !== 'no-calendar' ? 'animate-bounce' : ''}`} /> 
                           <span className="text-sm bg-green-400 font-bold text-white rounded-sm p-1">{items.length && items[0].key !== 'no-calendar' ? items.length : 0}</span>
                         </Space>
+                    </a> :
+                    <a onClick={e => e.preventDefault()} className="mr-4 text-lg bg-slate-100 rounded-md p-2 pb-3 mb-2">
+                      <Space>
+                        <BellFilled className={`${items.length > 0 && items[0].key !== 'no-calendar' ? '' : ''}`} /> 
+                      </Space>
                     </a>
+                  }
+                    
                 </Dropdown>
                 <span className="">
                   <img src="https://via.placeholder.com/400x400"
@@ -272,6 +289,7 @@ function App() {
             <Route path="admin/reviews" element={<ReviewsAdmin />} />
             <Route path="admin/reviews/:developer/:date" element={<ReviewsAdmin />} />
             <Route path="admin/schedular" element={<CalendarAdmin />} />
+            <Route path="admin/schedular/:id" element={<CalendarAdmin />} />
           </Route>
           <Route path="*" element={<Login />} />
         </Routes>

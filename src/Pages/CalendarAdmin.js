@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from "react"
 import { connect } from "react-redux"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import {
     DownOutlined
 } from '@ant-design/icons';
 import { Space, Table, Dropdown, Button, Form, Input, Select, Menu, Row, Col, Alert, notification, Popconfirm, Rate, DatePicker, TimePicker } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { SearchOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import Highlighter from 'react-highlight-words';
 import { useMutation, useQuery, useQueryClient } from 'react-query'
 import './CalendarAdmin.css'
@@ -24,8 +24,7 @@ function CalendarAdmin(props) {
     const queryClient = useQueryClient()
     const [errors, setErrors] = useState(null)
     const [api, contextHolder] = notification.useNotification();
-    const [selectedManager, setSelectedManager] = useState(null)
-    const [selectedSupManager, setSelectedSupManager] = useState(null)
+    const [showRescheduleReason, setShowRescheduleReason] = useState(false)
 
     const openNotification = (type) => {
         let description = type === 'create' ? 'Calendar Event created successfully' : 'Calendar Event updated successfully'
@@ -94,6 +93,8 @@ function CalendarAdmin(props) {
                 openNotification('create')
                 setShowAddEditForm(false)
                 form.resetFields()
+                setShowRescheduleReason(false)
+                navigate('/admin/schedular')
                 queryClient.invalidateQueries('calendars')
             }
         }
@@ -128,6 +129,8 @@ function CalendarAdmin(props) {
                 openNotification('update')
                 setShowAddEditForm(false)
                 form.resetFields()
+                setShowRescheduleReason(false)
+                navigate('/admin/schedular')
                 queryClient.invalidateQueries('calendars')
             }
         }
@@ -251,11 +254,14 @@ function CalendarAdmin(props) {
 
         // convert date format from DD/MM/YYYY to YYYY-MM-DD
         let date = moment(record.date.split('/').reverse().join('-')).zone('+05:00')
+        let endDate = moment(record.endDate.split('/').reverse().join('-')).zone('+05:00')
 
         let fields = {
             key: record.key,
             developer: record.developer,
+            rescheduleReason: record.rescheduleReason,
             date,
+            endDate,
             startTime: moment(record.startTime),
         }
 
@@ -351,7 +357,7 @@ function CalendarAdmin(props) {
         {
             title: 'Meeting Time',
             key: 'startTimeA',
-            width: '15%',
+            width: '10%',
             ...getColumnSearchProps('startTime'),
             // dataIndex: 'startTime',
             render: (_, record) => {
@@ -361,17 +367,34 @@ function CalendarAdmin(props) {
             sortDirections: ['descend', 'ascend'],
         },
         {
+            title: 'Rescheduled',
+            key: 'rescheduleReason',
+            width: '10%',
+            ...getColumnSearchProps('rescheduleReason'),
+            render: (_, record) => {
+                // check mark if rescheduled
+                if (record.rescheduleReason && record.rescheduleReason.length > 0) {
+                    return <CheckCircleOutlined title={record.rescheduleReason} className="px-2" style={{ color: 'green' }} />
+                } else {
+                    return <CloseCircleOutlined title={record.rescheduleReason} className="px-2" style={{ color: 'red' }} />
+                }
+            }
+        },
+        {
             title: 'Action',
             key: 'action',
             render: (_, record) => (
-                <Dropdown overlay={menu(items(record))}>
-                    <a onClick={e => e.preventDefault()}>
-                        <Space>
-                            Actions
-                            <DownOutlined />
-                        </Space>
-                    </a>
-                </Dropdown>
+                <Popconfirm
+                        title="Are you sure to delete this Event?"
+                        onConfirm={() => deleteRecord(record)}
+                        onCancel={() => console.log('cancel')}
+                        okText="Yes"
+                        cancelText="No"
+                    >
+                        <a>
+                            Delete
+                        </a>
+                </Popconfirm>
             )
         },
     ];
@@ -395,6 +418,8 @@ function CalendarAdmin(props) {
     };
 
     const navigate = useNavigate()
+    const params = useParams()
+
     useEffect(() => {
         if (!props.token) {
             const isAdmin = localStorage.getItem('isAdmin')
@@ -403,6 +428,18 @@ function CalendarAdmin(props) {
             }
         }
     }, [])
+
+    useEffect(() => {
+        if(params.id) {
+            setShowAddEditForm(true)
+            setShowRescheduleReason(true)
+            let data = calendarData?.data?.find(item => item.key === parseInt(params.id))
+            if(data) {
+                editRecord(data)
+            }
+
+        }
+    }, [params.id, calendarData])
 
     const layout = {
         labelCol: { span: 8 },
@@ -461,12 +498,23 @@ function CalendarAdmin(props) {
         );
     };
 
+    const disabledDate = (current, startDate = null) => {
+        // Can not select days before today
+        if(startDate) {
+            // greater than equal to start date and no previous date
+            let date = moment(form.getFieldValue('date'))
+            return current.endOf('day') < date.endOf('day') || current.endOf('day') < moment().endOf('day');
+        }
+
+        return current.endOf('day') < moment().endOf('day');
+    };
+
     return (
         <div>
             {contextHolder}
             <div className="flex justify-between">
                 <h1>Schedular</h1>
-                <Button type="primary" onClick={() => setShowAddEditForm((prev) => { form.resetFields(); return !prev })}>
+                <Button type="primary" onClick={() => setShowAddEditForm((prev) => { form.resetFields(); navigate('/admin/schedular'); setShowRescheduleReason(false); return !prev })}>
                     {`${showAddEditForm ? 'Back' : 'Add Meeting'}`}
                 </Button>
             </div>
@@ -489,21 +537,28 @@ function CalendarAdmin(props) {
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
-                                    <Form.Item name="date" label="Date" labelAlign="left" rules={[{ required: true }]}>
-                                        <DatePicker disabledTime={true} />
+                                    <Form.Item name="date" label="Start Date" labelAlign="left" rules={[{ required: true }]}>
+                                        <DatePicker disabledTime={true} disabledDate={disabledDate} />
                                     </Form.Item>
                                 </Col>
-                                
                             </Row>
                             <Row gutter={2}>
                                 <Col span={12}>
                                     <Form.Item name="endDate" label="End Date" labelAlign="left" rules={[{ required: true }]}>
-                                        <DatePicker disabledTime={true} />
+                                        <DatePicker disabledTime={true} disabledDate={(e) => disabledDate(e,true)} />
                                     </Form.Item>
                                 </Col>
                                 <Col span={12}>
                                     <Form.Item name="startTime" label="Time" labelAlign="left" rules={[{ required: true }]}>
                                         <TimePicker use12Hours format="h:mm A" />
+                                    </Form.Item>
+                                </Col>
+                            </Row>
+
+                            <Row gutter={2}>
+                                <Col span={12}>
+                                    <Form.Item name="rescheduleReason" label="Reschedule Reason" labelAlign="left" rules={[{ required: showRescheduleReason }]} hidden={!showRescheduleReason}>
+                                        <Input />
                                     </Form.Item>
                                 </Col>
                             </Row>

@@ -3,6 +3,7 @@ const { sequelize } = require("../config/sequelize");
 const { DataTypes } = require("sequelize");
 const Sequelize = require("sequelize");
 const { Employees } = require("./Employees");
+const { Users } = require("./Users");
 
 const Calendar = sequelize.define("Calendar", {
     id: {
@@ -18,6 +19,15 @@ const Calendar = sequelize.define("Calendar", {
             model: 'Employees',
             key: 'id'
         }
+    },
+    rescheduleReason: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: ''
+    },
+    seenByIDs: {
+        type: DataTypes.STRING,
+        allowNull: true
     },
     date: {
         type: DataTypes.STRING,
@@ -51,6 +61,7 @@ const Calendar = sequelize.define("Calendar", {
     }
 });
 
+// Calendar.hasMany(Users, { foreignKey: 'seenByIDs', as: 'seenBy' });
 Calendar.belongsTo(Employees, { foreignKey: 'developer' });
 
 module.exports = { Calendar };

@@ -10,12 +10,13 @@ import {
   ExclamationCircleOutlined,
   DownOutlined
 } from '@ant-design/icons';
-import { Card, Col, Row, Statistic, Space, Menu, Dropdown, Tag, Calendar } from 'antd';
+import { Card, Col, Row, Statistic, Space, Menu, Dropdown, Tag, Calendar, Popover } from 'antd';
 import './AdminDashboard.css'
 import { useQuery } from "react-query";
 
 function AdminDashboard(props) {
   const navigate = useNavigate()
+  const [popUpVisible, setPopUpVisible] = useState([])
   useEffect(() => {
     if (!props.token) {
       const isAdmin = localStorage.getItem('isAdmin')
@@ -48,7 +49,15 @@ function AdminDashboard(props) {
       }
     }).then(res =>
       res.json()
-    )
+    ), {
+    onSuccess: (data) => {
+      data?.data?.forEach((item) => {
+        if (item.date) {
+          setPopUpVisible(prev => [...prev, { key: item.date, open: false }])
+        }
+      })
+    }
+  }
   )
 
   const { isLoading: employeesLoading, data: employeesData } = useQuery('employees', () =>
@@ -161,7 +170,7 @@ function AdminDashboard(props) {
         startTime = new Date(startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
         listData.push({
           ...item,
-          startTimeFormatted: startTime
+          startTimeFormatted: startTime,
         })
       }
     })
@@ -185,27 +194,27 @@ function AdminDashboard(props) {
   }
 
   const reschedule = (record) => {
-    console.log(record)
+    navigate(`/admin/schedular/${record.key}`)
   }
 
   const items = (record) => {
     return [
-        {
-            key: '2',
-            label: (
-                <a onClick={() => createReview(record)}>
-                    Create Review
-                </a>
-            )
-        },
-        {
-            key: '3',
-            label: (
-              <a onClick={() => reschedule(record)}>
-                Reschedule
-              </a>
-            )
-        }
+      {
+        key: '2',
+        label: (
+          <a onClick={() => createReview(record)}>
+            Create Review
+          </a>
+        )
+      },
+      {
+        key: '3',
+        label: (
+          <a onClick={() => reschedule(record)}>
+            Reschedule
+          </a>
+        )
+      }
     ]
   };
 
@@ -213,84 +222,138 @@ function AdminDashboard(props) {
     <Menu items={items} />
   );
 
+  const togglePopUp = (key) => {
+    const showPopUp = popUpVisible.find(item => item.key === key)
+    if (showPopUp) {
+      let newPopUpVisible = popUpVisible.filter(item => item.key === key)
+      newPopUpVisible[0].open = !newPopUpVisible[0].open
+      setPopUpVisible(prev => [...prev, newPopUpVisible[0]])
+    } else {
+      setPopUpVisible(prev => [...prev, { key, open: true }])
+    }
+  }
+
   const dateCellRender = (value) => {
     const listData = getListData(value);
+    const showPopUp = popUpVisible.find(item => item.key === value.format('DD/MM/YYYY'))
+    const content = (
+      <div>
+        {
+          listData.map((item) => (
+            <div key={item.key} className="hover:bg-gray-600 hover:text-white p-2 rounded-md" onClick={() => console.log(item)}>
+
+              {item.manager} & {item.sportingManager} Meeting with <span className="text-blue-600">{item.developerName}</span> @  <span className="text-yellow-600">{item.startTimeFormatted}</span>
+
+              <Dropdown overlay={menu(items(item))} className="ml-5">
+                <a onClick={e => e.preventDefault()}>
+                  <Space>
+                    Actions
+                    <DownOutlined />
+                  </Space>
+                </a>
+              </Dropdown>
+            </div>
+          ))
+        }
+      </div>
+    )
+
+    if (listData.length > 0) {
+      // debugger
+    }
     return (
       <ul className="events">
         {listData?.length > 0 && <span className="bg-red-400 p-1 rounded mb-1 text-white">{listData?.length} Meetings</span>}
-        {listData.map((item) => (
-          <li key={item.key} className="hover:bg-gray-600 hover:text-white p-2 rounded-md" onClick={() => console.log(item)}>
-            {item.manager} & {item.sportingManager} Meeting with {item.developerName} @ {item.startTimeFormatted}
+        {listData?.length > 0 &&
+          <li key={listData[0]?.key} className="hover:bg-gray-600 hover:text-white p-2 rounded-md">
+            {listData[0]?.manager} & {listData[0]?.sportingManager} Meeting with {listData[0]?.developerName} @ {listData[0]?.startTimeFormatted}
 
-            <Dropdown overlay={menu(items(item))} className="ml-5">
-              <a onClick={e => e.preventDefault()}>
+            {
+              listData.length <= 1 &&
+              <Dropdown overlay={menu(items(listData[0]))} className="ml-5">
+                <a onClick={e => e.preventDefault()}>
                   <Space>
-                      Actions
-                      <DownOutlined />
+                    Actions
+                    <DownOutlined />
                   </Space>
-              </a>
-            </Dropdown>
+                </a>
+              </Dropdown>
+            }
+
 
           </li>
-        ))}
+        }
+
+        {
+          listData.length > 1 &&
+          <div className="flex flex-end justify-center">
+            <Popover content={content} title={`All ${value.format('DD, dddd')} Events`} trigger="click" open={showPopUp?.open} />
+            <button onClick={() => togglePopUp(showPopUp?.key)} className="btn btn-xs btn-ghost font-bold">{showPopUp?.open ? 'Close' : '...'}</button>
+          </div>
+        }
+
       </ul>
     );
   };
 
   return (
-    <div className="site-statistic-demo-card">
-      <Row gutter={16}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Users"
-              value={statsData?.users}
-              valueStyle={{ color: '#3f8600' }}
-              prefix={<ArrowUpOutlined />}
-              suffix={<UserOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Developers"
-              value={statsData?.developers}
-              valueStyle={{ color: '#cf1322' }}
-              prefix={<ArrowUpOutlined />}
-              suffix={<UserOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Today's Meetings"
-              value={statsData?.meetings}
-              valueStyle={{ color: '#f16012' }}
-              prefix={<AlertOutlined />}
-              suffix={<NotificationOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Today's Reviews"
-              value={statsData?.reviews}
-              valueStyle={{ color: '#216012' }}
-              prefix={<ExclamationCircleOutlined />}
-              suffix={<LaptopOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
-      <Row gutter={16} style={{ marginTop: 12 }}>
-        <Col span={24}>
-          <Calendar dateCellRender={dateCellRender} monthCellRender={monthCellRender} />
-        </Col>
-      </Row>
-    </div>
+    <>
+      <h1 className="text-lg -mt-2">Welcome To Dashboard</h1>
+      <div className="site-statistic-demo-card">
+        <Row gutter={16}>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="Users"
+                value={statsData?.users}
+                valueStyle={{ color: '#3f8600' }}
+                prefix={<ArrowUpOutlined />}
+                suffix={<UserOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="Developers"
+                value={statsData?.developers}
+                valueStyle={{ color: '#cf1322' }}
+                prefix={<ArrowUpOutlined />}
+                suffix={<UserOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="Today's Meetings"
+                value={statsData?.meetings}
+                valueStyle={{ color: '#f16012' }}
+                prefix={<AlertOutlined />}
+                suffix={<NotificationOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card>
+              <Statistic
+                title="Today's Reviews"
+                value={statsData?.reviews}
+                valueStyle={{ color: '#216012' }}
+                prefix={<ExclamationCircleOutlined />}
+                suffix={<LaptopOutlined />}
+              />
+            </Card>
+          </Col>
+        </Row>
+        <Row gutter={16} style={{ marginTop: 12 }}>
+          <Col span={24}>
+            <Calendar dateCellRender={dateCellRender} monthCellRender={monthCellRender} />
+          </Col>
+        </Row>
+      </div>
+    </>
+
   )
 }
 

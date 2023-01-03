@@ -665,9 +665,14 @@ router.delete('/delete-review/:id', async (req, res, next) => {
 router.get('/get-calendars', async (req, res, next) => {
 
     await Calendar.sync();
-    await Notifications.sync();
 
     let queryParam = req.query.current;
+
+    let user = await Users.findOne({
+        where: {
+            alias: req.user.alias
+        }
+    });
 
     let query = {
         include: [{
@@ -679,9 +684,7 @@ router.get('/get-calendars', async (req, res, next) => {
                 model: Users,
                 as: 'sporting_manager_obj'
             }]
-        }, {
-            model: Notifications,
-        }]
+        }],
     }
 
     let date = new Date();
@@ -718,6 +721,8 @@ router.get('/get-calendars', async (req, res, next) => {
                     endDate: moment(calendar.date).format('DD/MM/YYYY'),
                     startTime: calendar.startTime,
                     endTime: calendar.endTime,
+                    seen: calendar.seenByIDs ? calendar.seenByIDs.split(',').filter((id) => user.id == id) ? true : false : false,
+                    rescheduleReason: calendar.rescheduleReason,
                     createdBy: calendar.createdBy,
                     createdDate: new Date(calendar.createdAt).toLocaleDateString(),
                 })
@@ -781,6 +786,8 @@ router.post('/add-calendar', async (req, res, next) => {
             endDate: endDate._i,
             startTime: req.body.startTime,
             endTime,
+            rescheduleReason: '',
+            seenByIDs: [],
             createdBy: req.user.alias
         })
         currentDate = currentDate.add(7, 'days');
@@ -790,10 +797,10 @@ router.post('/add-calendar', async (req, res, next) => {
 
     let query = '';
     if (bulkCalendars.length > 0) {
-        query = `INSERT INTO calendars (developer, date, endDate, startTime, endTime, createdBy, createdAt, updatedAt) VALUES `;
+        query = `INSERT INTO calendars (developer, date, endDate, startTime, endTime, rescheduleReason, createdBy, createdAt, updatedAt) VALUES `;
     }
     bulkCalendars.forEach((calendar) => {
-        query += `(${calendar.developer}, '${calendar.date}', '${calendar.endDate}', '${calendar.startTime}', '${calendar.endTime}', '${calendar.createdBy}', '${new Date().toISOString()}', '${new Date().toISOString()}'),`;
+        query += `(${calendar.developer}, '${calendar.date}', '${calendar.endDate}', '${calendar.startTime}', '${calendar.endTime}', '${calendar.rescheduleReason}', '${calendar.createdBy}', '${new Date().toISOString()}', '${new Date().toISOString()}'),`;
     })
     query = query.slice(0, -1);
 
@@ -850,6 +857,7 @@ router.put('/update-calendar/:id', async (req, res, next) => {
         date: req.body.date.split('T')[0],
         startTime: req.body.startTime,
         endTime,
+        rescheduleReason: req.body.rescheduleReason,
         updatedBy: req.user.alias
     }, {
         where: {
@@ -870,9 +878,38 @@ router.delete('/delete-calendar/:id', async (req, res, next) => {
     
     await Calendar.sync();
 
-    Calendar.destroy({
+    // find calendar by id
+    let theCalendar = await Calendar.findOne({
         where: {
             id: req.params.id
+        }
+    });
+
+    // get all calendars between today and end date
+    let calendars = await Calendar.findAll({
+        where: {
+            developer: theCalendar.developer,
+            startTime: theCalendar.startTime
+        }
+    });
+
+    // filter calendars if date is not between today and end date
+    calendars = calendars.filter((calendar) => {
+        let calendarDate = moment(calendar.date);
+        if(calendarDate >= moment() && calendarDate <= moment(theCalendar.endDate)) {
+            return true;
+        } else {
+            return false;
+        }
+    })
+
+    // delete all calendars between today and end date
+
+    Calendar.destroy({
+        where: {
+            id: {
+                [Op.in]: calendars.map((calendar) => calendar.id)
+            }
         }
     }).then((calendar) => {
         if (!calendar) {
@@ -880,7 +917,8 @@ router.delete('/delete-calendar/:id', async (req, res, next) => {
         } else {
             res.status(200).json({ message: 'Calendar deleted successfully' });
         }
-    }).catch((err) => {
+    }
+    ).catch((err) => {
         res.status(400).json({ error: err });
     })
 })
@@ -971,46 +1009,54 @@ router.get('/get-stats', async (req, res, next) => {
 
 router.post('/set-notifications', async (req, res, next) => {
 
-    Notifications.sync();
+    Calendar.sync();
 
     let calendarIds = req.body.calendarIds;
 
-    // add bulk notifications for all calendar ids
-
-    let notifications = [];
-
-    for (let i = 0; i < calendarIds.length; i++) {
-        notifications.push({
-            calendarId: calendarIds[i],
-            status: 'read',
-            createdBy: req.user.alias
-        });
-    }
-
-    // read all notifications for current user
-    let userNotifications = await Notifications.findAll({
+    let user = await Users.findOne({
         where: {
-            createdBy: req.user.alias
+            alias: req.user.alias
         }
     });
-    
 
-    // create bulk notifications using raw query
-
-    let query = 'INSERT INTO Notifications (calendarId, status, createdBy, createdDate, updatedDate) VALUES ';
-
-    for (let i = 0; i < notifications.length; i++) {
-        query += '(' + notifications[i].calendarId + ', "' + notifications[i].status + '", "' + notifications[i].createdBy + '", NOW(), NOW())';
-        if (i != notifications.length - 1) {
-            query += ',';
+    let calendars = await Calendar.findAll({
+        where: {
+            id: {
+                [Op.in]: calendarIds
+            }
         }
-    }
+    });
 
-    sequelize.query(query, { type: sequelize.QueryTypes.INSERT }).then((notifications) => {
-        res.status(200).json({ message: 'Notifications set successfully' });
-    }).catch((err) => {
-        res.status(400).json({ error: err });
+    // add logged in user id to each calendar seenByIDs field append
+    calendars.forEach((calendar) => {
+        if(calendar.seenByIDs && calendar.seenByIDs.length > 0) {
+            calendar.seenByIDs = calendar.seenByIDs.split(',').push(user.id);
+        } else {
+            calendar.seenByIDs = [user.id];
+        }
     })
+    
+    // bulk update all calendars raw query sequelize append to array seenByIDs
+
+    let query = ''
+    calendars.forEach((calendar) => {
+        query += `UPDATE calendars SET seenByIDs = '${
+            calendar.seenByIDs.map((id) => id).join(',')
+        }' WHERE id = ${calendar.id};`
+    })
+
+    sequelize
+        .query
+        (query
+        ).then((result) => {
+            res.status(200).json({ message: 'Notifications set successfully' });
+        }
+        ).catch((err) => {
+            res.status(400).json({ error: err });
+        }
+        )
+
+
 })
 
 module.exports = router;

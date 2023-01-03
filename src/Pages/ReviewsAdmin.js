@@ -427,7 +427,7 @@ const disabledDate = (current) => {
 
     const layout = {
         labelCol: { span: 7 },
-        wrapperCol: { span: 12 },
+        wrapperCol: { span: 14 },
     };
 
     return (
@@ -488,8 +488,8 @@ const disabledDate = (current) => {
                                 </Col>
                             </Row>
                             <Row gutter={4}>
-                                <Col span={18}>
-                                    <Form.Item name="text" labelCol={2} wrapperCol={8}  label="Review" labelAlign="left" rules={[{ required: true }]}>
+                                <Col span={22}>
+                                    <Form.Item name="text" labelCol={2} wrapperCol={16}  label="Review" labelAlign="left" rules={[{ required: true }]}>
                                         <TextArea className="!ml-11" />
                                     </Form.Item>
                                 </Col>
