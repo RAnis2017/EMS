@@ -70,7 +70,7 @@ const AppOutlet = () => {
               key: calendar.key,
               seen: calendar.seen,
               label: (
-                <p>You have an upcoming meeting with <span className="text-blue-600">{calendar.developerName}</span> @  <span className="text-yellow-600">{startTime}</span></p>
+                <p><span hidden={calendar.seen} className="mr-2">🎉</span>You have an upcoming meeting with <span className="text-blue-600">{calendar.developerName}</span> @  <span className="text-yellow-600">{startTime}</span></p> 
               )
             }
           })
@@ -235,7 +235,7 @@ const AppOutlet = () => {
                     <a onClick={e => setNotifications()} className="mr-4 text-lg bg-slate-100 rounded-md p-2 pb-3 mb-2">
                         <Space>
                           <BellFilled className={`${items.length > 0 && items[0].key !== 'no-calendar' ? 'animate-bounce' : ''}`} /> 
-                          <span className="text-sm bg-green-400 font-bold text-white rounded-sm p-1">{items.length && items[0].key !== 'no-calendar' ? items.length : 0}</span>
+                          <span className="text-sm bg-green-400 font-bold text-white rounded-sm p-1">{items.length && items[0].key !== 'no-calendar' ? items.filter(item => item.seen === false).length : 0}</span>
                         </Space>
                     </a> :
                     <a onClick={e => e.preventDefault()} className="mr-4 text-lg bg-slate-100 rounded-md p-2 pb-3 mb-2">

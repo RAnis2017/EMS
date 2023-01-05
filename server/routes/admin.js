@@ -689,7 +689,9 @@ router.get('/get-calendars', async (req, res, next) => {
 
     let date = new Date();
     // formate date to yyyy-mm-dd
-    let formattedDate = date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+    let month = (date.getMonth() + 1).length > 1 ? (date.getMonth() + 1) : '0' + (date.getMonth() + 1);
+    let dateVal = date.getDate().length > 1 ? date.getDate() : '0' + date.getDate();
+    let formattedDate = date.getFullYear() + '-' + month + '-' + dateVal;
     
     if(queryParam == '1') {
         query.where = {
@@ -711,6 +713,12 @@ router.get('/get-calendars', async (req, res, next) => {
         } else {
             let data = [];
             calendars.forEach((calendar) => {
+                // if(queryParam == '1' && calendar.date != formattedDate) {
+                //     return;
+                // }
+                if(queryParam == '1') {
+                    // debugger;
+                }
                 data.push({
                     key: calendar.id,
                     developer: calendar.Employee.id,
@@ -1029,34 +1037,27 @@ router.post('/set-notifications', async (req, res, next) => {
 
     // add logged in user id to each calendar seenByIDs field append
     calendars.forEach((calendar) => {
-        if(calendar.seenByIDs && calendar.seenByIDs.length > 0) {
-            calendar.seenByIDs = calendar.seenByIDs.split(',').push(user.id);
-        } else {
-            calendar.seenByIDs = [user.id];
+        calendar.seenByIDs = calendar.seenByIDs ? calendar.seenByIDs.split(',') : [];
+
+        if (!calendar.seenByIDs.includes(user.id)) {
+            calendar.seenByIDs.push(user.id);
         }
     })
     
     // bulk update all calendars raw query sequelize append to array seenByIDs
 
-    let query = ''
+    let queries = []
     calendars.forEach((calendar) => {
-        query += `UPDATE calendars SET seenByIDs = '${
-            calendar.seenByIDs.map((id) => id).join(',')
-        }' WHERE id = ${calendar.id};`
+        queries.push(`UPDATE calendars SET seenByIDs = '${
+            calendar.seenByIDs.join(',')
+        }' WHERE id = ${calendar.id};`)
     })
 
-    sequelize
-        .query
-        (query
-        ).then((result) => {
-            res.status(200).json({ message: 'Notifications set successfully' });
-        }
-        ).catch((err) => {
-            res.status(400).json({ error: err });
-        }
-        )
+    await Promise.all(queries.map(async (query) => {
+        await sequelize.query(query);
+    }))
 
-
+    res.status(200).json({ message: 'Notifications set successfully' });
 })
 
 module.exports = router;
